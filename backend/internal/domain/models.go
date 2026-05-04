@@ -1,0 +1,62 @@
+package domain
+
+import "time"
+
+type TaskInput struct {
+	UserID           *int64     `json:"user_id,omitempty"`
+	Title            string     `json:"title"`
+	Description      string     `json:"description"`
+	Context          string     `json:"context"`
+	Priority         int        `json:"priority"`
+	EstimatedMinutes int        `json:"estimated_minutes"`
+	Deadline         *time.Time `json:"deadline,omitempty"`
+}
+
+type Task struct {
+	ID               int64      `json:"id"`
+	UserID           *int64     `json:"user_id,omitempty"`
+	Title            string     `json:"title"`
+	Description      string     `json:"description"`
+	Context          string     `json:"context"`
+	Priority         int        `json:"priority"`
+	EstimatedMinutes int        `json:"estimated_minutes"`
+	Deadline         *time.Time `json:"deadline,omitempty"`
+	Status           string     `json:"status"`
+	CreatedAt        time.Time  `json:"created_at"`
+}
+
+type MLRecommendation struct {
+	MethodCode     string             `json:"method_code"`
+	MethodName     string             `json:"method_name"`
+	Confidence     float64            `json:"confidence"`
+	Reason         string             `json:"reason"`
+	Scores         map[string]float64 `json:"scores"`
+	PlanningParams PlanningParams     `json:"planning_params"`
+	PlanDraft      []PlanStep         `json:"plan_draft"`
+	ScheduleHint   string             `json:"schedule_hint"`
+}
+
+type PlanningParams struct {
+	FocusMinutes  int `json:"focus_minutes"`
+	BreakMinutes  int `json:"break_minutes"`
+	BlockCount    int `json:"block_count"`
+	ReviewMinutes int `json:"review_minutes"`
+}
+
+type Plan struct {
+	ID           int64      `json:"id"`
+	TaskID       int64      `json:"task_id"`
+	MethodCode   string     `json:"method_code"`
+	Summary      string     `json:"summary"`
+	ScheduleHint string     `json:"schedule_hint"`
+	Steps        []PlanStep `json:"steps"`
+}
+
+type PlanStep struct {
+	ID               int64  `json:"id,omitempty"`
+	Position         int    `json:"position"`
+	Title            string `json:"title"`
+	Description      string `json:"description"`
+	EstimatedMinutes int    `json:"estimated_minutes"`
+	Status           string `json:"status,omitempty"`
+}
