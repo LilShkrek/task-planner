@@ -7,6 +7,7 @@ def build_generation_prompt(
     step_template=None,
     strict=False,
     previous_titles=None,
+    semantic_structure=None,
 ):
     params = prediction.get("planning_params", {})
     title = _clean(task.get("title") or "задача")
@@ -15,6 +16,7 @@ def build_generation_prompt(
     method = prediction.get("method_name") or prediction.get("method_code") or ""
     subject_entities = _subject_entities(title, description, context)
     entities_hint = ", ".join(subject_entities) if subject_entities else "не выделены"
+    semantic_hint = _semantic_hint(semantic_structure)
     strict_hint = (
         "Строгий повтор: предыдущий вариант был слишком общим или повторял входные данные. "
         "Сделай текст предметным, без заглушек, вопросов и дословного копирования."
@@ -31,6 +33,7 @@ def build_generation_prompt(
                 f"Описание: {description}.",
                 f"Контекст: {context}.",
                 f"Предметные сущности: {entities_hint}.",
+                f"Семантическая структура: {semantic_hint}.",
                 f"Метод планирования: {method}.",
                 "Требования: одно предложение до 16 слов; опиши смысл плана и ожидаемый результат; не перефразируй только название.",
                 strict_hint,
@@ -44,6 +47,7 @@ def build_generation_prompt(
                 "Поле: schedule_hint.",
                 f"Задача: {title}.",
                 f"Предметные сущности: {entities_hint}.",
+                f"Семантическая структура: {semantic_hint}.",
                 f"Метод: {method}.",
                 f"Фокус-сессия: {params.get('focus_minutes', 25)} минут.",
                 f"Перерыв: {params.get('break_minutes', 5)} минут.",
@@ -63,6 +67,7 @@ def build_generation_prompt(
                 "Поле: step_title.",
                 f"Задача: {title}.",
                 f"Предметные сущности: {entities_hint}.",
+                f"Семантическая структура: {semantic_hint}.",
                 f"Номер шага: {step_index}.",
                 f"Базовый шаг из шаблона: {step_text}.",
                 f"Уже использованные заголовки: {used}.",
@@ -80,6 +85,7 @@ def build_generation_prompt(
                 f"Описание задачи: {description}.",
                 f"Контекст: {context}.",
                 f"Предметные сущности: {entities_hint}.",
+                f"Семантическая структура: {semantic_hint}.",
                 f"Номер шага: {step_index}.",
                 f"Базовый шаг из шаблона: {step_text}.",
                 "Требования: 1 короткое предложение; опиши действие вокруг предметной сущности; не повторяй описание задачи целиком.",
@@ -110,6 +116,25 @@ def _subject_entities(title, description, context):
         if keyword in text:
             entities.append(keyword)
     return entities
+
+
+def _semantic_hint(semantic_structure):
+    if not isinstance(semantic_structure, dict):
+        return "не выделена"
+    goal = _clean(semantic_structure.get("goal") or "")
+    domain = _clean(semantic_structure.get("domain") or "")
+    subgoals = semantic_structure.get("subgoals") or []
+    constraints = semantic_structure.get("constraints") or []
+    parts = []
+    if goal:
+        parts.append(f"цель: {goal}")
+    if domain:
+        parts.append(f"область: {domain}")
+    if subgoals:
+        parts.append("подцели: " + "; ".join(_clean(item) for item in subgoals[:6]))
+    if constraints:
+        parts.append("ограничения: " + "; ".join(_clean(item) for item in constraints[:4]))
+    return " | ".join(parts) if parts else "не выделена"
 
 
 def _step_text(step_template, step_index):

@@ -278,6 +278,12 @@ class ResponseGeneratorTest(unittest.TestCase):
         self.assertNotEqual(result["plan_draft"][0]["description"], "Собрать материалы и сделать слайды.")
 
     def test_subject_experiment_task_rejects_generic_steps(self):
+        semantic = {
+            "goal": "проверить исследовательские гипотезы",
+            "subgoals": ["сформулировать гипотезы", "определить критерии оценки", "провести эксперименты"],
+            "constraints": ["исследовательская задача"],
+            "domain": "эксперименты и гипотезы",
+        }
         result = generate_response(
             task={
                 "title": "Спланировать эксперименты для проверки гипотез",
@@ -288,6 +294,7 @@ class ResponseGeneratorTest(unittest.TestCase):
             prediction=_prediction(blocks=21, focus=21, review=22),
             template=_generic_time_blocking_template(),
             text_generator=GenericSubjectTextGenerator(),
+            semantic_structure=semantic,
         )
 
         titles = [step["title"] for step in result["plan_draft"]]
@@ -323,6 +330,12 @@ class ResponseGeneratorTest(unittest.TestCase):
         _assert_title_description_consistency(self, result)
 
     def test_subject_presentation_task_gets_slide_and_speech_steps(self):
+        semantic = {
+            "goal": "подготовить презентацию для защиты проекта",
+            "subgoals": ["собрать материал для слайдов", "продумать структуру", "прорепетировать выступление"],
+            "constraints": ["учебный проект"],
+            "domain": "презентация",
+        }
         result = generate_response(
             task={
                 "title": "Подготовить презентацию для защиты проекта",
@@ -333,6 +346,7 @@ class ResponseGeneratorTest(unittest.TestCase):
             prediction=_prediction(blocks=5),
             template=_generic_time_blocking_template(),
             text_generator=GenericSubjectTextGenerator(),
+            semantic_structure=semantic,
         )
 
         titles = [step["title"] for step in result["plan_draft"]]
@@ -365,6 +379,12 @@ class ResponseGeneratorTest(unittest.TestCase):
         self.assertIn("Проверь выводы", result["plan_draft"][4]["description"])
 
     def test_email_task_uses_different_position_roles(self):
+        semantic = {
+            "goal": "ответить на письмо преподавателю",
+            "subgoals": ["уточнить цель письма", "собрать данные", "написать черновик", "проверить формулировки"],
+            "constraints": ["приложить файл"],
+            "domain": "письмо",
+        }
         result = generate_response(
             task={
                 "title": "Ответить на письмо преподавателю",
@@ -375,6 +395,7 @@ class ResponseGeneratorTest(unittest.TestCase):
             prediction=_prediction(blocks=2),
             template=_generic_time_blocking_template(),
             text_generator=GenericSubjectTextGenerator(),
+            semantic_structure=semantic,
         )
 
         titles = [step["title"] for step in result["plan_draft"]]
@@ -388,6 +409,51 @@ class ResponseGeneratorTest(unittest.TestCase):
                 "Отправить письмо",
             ],
         )
+        _assert_unique_descriptions(self, result)
+        _assert_title_description_consistency(self, result)
+
+    def test_vacation_trip_uses_semantic_structure_for_concrete_steps(self):
+        semantic = {
+            "goal": "организовать отпуск и поездку в Казань",
+            "subgoals": [
+                "выбрать даты поездки",
+                "рассчитать бюджет",
+                "забронировать жилье",
+                "составить маршрут",
+                "подготовить вещи и документы",
+            ],
+            "constraints": ["не выйти за бюджет", "проверить документы"],
+            "domain": "отпуск и поездка",
+        }
+        result = generate_response(
+            task={
+                "title": "Организовать отпуск и поездку в Казань",
+                "description": "Нужно выбрать даты, рассчитать бюджет, забронировать жилье, составить маршрут и собрать документы",
+                "context": "личная поездка",
+                "estimated_minutes": 180,
+            },
+            prediction=_prediction(blocks=5),
+            template=_generic_time_blocking_template(),
+            text_generator=GenericSubjectTextGenerator(),
+            semantic_structure=semantic,
+        )
+
+        titles = [step["title"] for step in result["plan_draft"]]
+        self.assertEqual(
+            titles,
+            [
+                "Уточнить даты",
+                "Рассчитать бюджет",
+                "Выбрать жилье",
+                "Составить маршрут",
+                "Подготовить вещи и документы",
+            ],
+        )
+        self.assertIn("даты", result["plan_draft"][0]["description"])
+        self.assertIn("бюджет", result["plan_draft"][1]["description"])
+        self.assertIn("жиль", result["plan_draft"][2]["description"])
+        self.assertIn("маршрут", result["plan_draft"][3]["description"])
+        self.assertIn("документ", result["plan_draft"][4]["description"])
         _assert_unique_descriptions(self, result)
         _assert_title_description_consistency(self, result)
 
@@ -446,10 +512,18 @@ def _assert_title_description_consistency(test_case, result):
 
 def _content_words(text):
     return {
-        word[:7]
+        _word_key(word)
         for word in text.lower().replace("ё", "е").replace(",", " ").replace(".", " ").split()
         if len(word) > 3
     }
+
+
+def _word_key(word):
+    if word.startswith("жиль"):
+        return "жиль"
+    if word.startswith("документ"):
+        return "документ"
+    return word[:7]
 
 
 def _title_from_prompt(prompt):

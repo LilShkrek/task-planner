@@ -35,6 +35,14 @@ type MLRecommendation struct {
 	Summary        string             `json:"summary"`
 	PlanDraft      []PlanStep         `json:"plan_draft"`
 	ScheduleHint   string             `json:"schedule_hint"`
+	Semantic       SemanticStructure  `json:"semantic_structure,omitempty"`
+}
+
+type SemanticStructure struct {
+	Goal        string   `json:"goal"`
+	Subgoals    []string `json:"subgoals"`
+	Constraints []string `json:"constraints"`
+	Domain      string   `json:"domain"`
 }
 
 type PlanningParams struct {

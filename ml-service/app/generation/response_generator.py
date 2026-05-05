@@ -98,13 +98,15 @@ ACTION_VERBS = (
 )
 
 
-def generate_response(task, prediction, template, text_generator=None):
+def generate_response(task, prediction, template, text_generator=None, semantic_structure=None):
     steps_template = template.get("steps") or []
     if not steps_template:
         raise RuntimeError(f"шаблон плана для метода {prediction['method_code']} не содержит шагов")
 
     generator = text_generator or get_text_generator()
     planning_params = prediction.get("planning_params", {})
+    task = dict(task)
+    task["_semantic_structure"] = semantic_structure or {}
 
     summary = _generate_checked_field(
         generator,
@@ -232,6 +234,7 @@ def _generate_checked_field(
             step_template,
             strict=strict,
             previous_titles=previous_titles,
+            semantic_structure=task.get("_semantic_structure"),
         )
         generated = generator.generate(prompt, max_chars=max_chars).strip()
         generated = _postprocess_text(generated, field, prediction)
@@ -325,7 +328,7 @@ def _generic_step_text(text):
 
 
 def _has_subject_entities(task):
-    return bool(_subject_entities(task))
+    return bool(_subject_entities(task) or _semantic_subgoals(task) or _semantic_domain(task))
 
 
 def _uses_subject_entity(text, task):
@@ -410,6 +413,8 @@ def _word_key(word):
         return "провер"
     if word.startswith("материал"):
         return "материал"
+    if word.startswith("жиль"):
+        return "жиль"
     return word[:7]
 
 
@@ -467,6 +472,9 @@ def _step_role(text):
 
 def _fallback_summary(task):
     title = _task_title(task)
+    semantic = _semantic_structure(task)
+    if semantic.get("goal") and semantic.get("subgoals"):
+        return _normalize_sentence(f"План поможет выполнить «{semantic['goal']}» через конкретные этапы: {semantic['subgoals'][0]}")
     action = _short_task_action(task)
     if action:
         return _normalize_sentence(f"План поможет {action} и оставить время на проверку результата")
@@ -490,6 +498,9 @@ def _fallback_step_title(task, step_template, position):
     subject_title = _subject_step_title(task, position)
     if subject_title:
         return subject_title
+    semantic_title = _semantic_step_title(task, position)
+    if semantic_title:
+        return semantic_title
     base = _template_title(step_template, position)
     base = base.replace("{task_title}", _task_title(task))
     if _bad_fragment(base) or _generic_step_text(base) or _normalized(base) == _normalized(_task_title(task)):
@@ -501,6 +512,9 @@ def _fallback_step_description(task, step_template, title, position):
     subject_description = _subject_step_description(task, title, position)
     if subject_description:
         return subject_description
+    semantic_description = _semantic_step_description(task, title, position)
+    if semantic_description:
+        return semantic_description
     base = _template_description(step_template)
     if base:
         text = base.replace("{task_title}", _task_title(task))
@@ -575,6 +589,37 @@ def _subject_entities(task):
     return entities
 
 
+def _semantic_structure(task):
+    value = task.get("_semantic_structure") or {}
+    return value if isinstance(value, dict) else {}
+
+
+def _semantic_subgoals(task):
+    subgoals = _semantic_structure(task).get("subgoals") or []
+    return [str(item) for item in subgoals if str(item).strip()][:7] if isinstance(subgoals, list) else []
+
+
+def _semantic_constraints(task):
+    constraints = _semantic_structure(task).get("constraints") or []
+    return [str(item) for item in constraints if str(item).strip()][:5] if isinstance(constraints, list) else []
+
+
+def _semantic_domain(task):
+    return str(_semantic_structure(task).get("domain") or "").strip()
+
+
+def _semantic_roots(task):
+    text = " ".join(
+        [
+            str(_semantic_structure(task).get("goal") or ""),
+            _semantic_domain(task),
+            " ".join(_semantic_subgoals(task)),
+            " ".join(_semantic_constraints(task)),
+        ]
+    )
+    return _content_words(text)
+
+
 def _subject_entity_roots(task):
     roots = set()
     for entity in _subject_entities(task):
@@ -594,7 +639,79 @@ def _subject_entity_roots(task):
             roots.add("выступлен")
         elif entity == "письмо":
             roots.add("письм")
+    roots.update(_semantic_roots(task))
     return roots
+
+
+def _semantic_step_title(task, position):
+    subgoals = _semantic_subgoals(task)
+    constraints = _semantic_constraints(task)
+    combined = subgoals + constraints
+    if not combined:
+        return ""
+
+    patterns = (
+        (("дат", "срок", "когда"), "Уточнить даты"),
+        (("бюджет", "стоим", "деньг", "расход"), "Рассчитать бюджет"),
+        (("жиль", "отел", "гостиниц", "квартир"), "Выбрать жилье"),
+        (("маршрут", "план поезд", "локац", "транспорт"), "Составить маршрут"),
+        (("вещ", "документ", "паспорт", "билет"), "Подготовить вещи и документы"),
+    )
+    matched = []
+    normalized_items = [(item, _normalized(item)) for item in combined]
+    for markers, title in patterns:
+        if any(any(marker in normalized for marker in markers) for _, normalized in normalized_items):
+            matched.append(title)
+    if len(matched) >= 3:
+        return _pick_position(matched, position)
+
+    role_prefixes = ("Уточнить", "Структурировать", "Подготовить", "Проверить", "Завершить")
+    item = combined[min(max(position, 1), len(combined)) - 1]
+    return f"{role_prefixes[min(position, len(role_prefixes)) - 1]} {_short_phrase(item)}"
+
+
+def _semantic_step_description(task, title, position):
+    subgoals = _semantic_subgoals(task)
+    constraints = _semantic_constraints(task)
+    domain = _semantic_domain(task) or _task_title(task)
+    normalized_title = _normalized(title)
+
+    if "дат" in normalized_title:
+        return f"Проверь доступные даты для «{domain}» и согласуй их с важными ограничениями."
+    if "бюджет" in normalized_title:
+        return f"Оцени бюджет для «{domain}»: дорогу, жилье, обязательные расходы и небольшой резерв."
+    if "жиль" in normalized_title:
+        return f"Сравни варианты жилья для «{domain}» по цене, расположению и условиям бронирования."
+    if "маршрут" in normalized_title:
+        return f"Составь маршрут для «{domain}»: ключевые точки, порядок перемещений и время в пути."
+    if "документ" in normalized_title or "вещ" in normalized_title:
+        return f"Подготовь список вещей и документов для «{domain}» и проверь, что ничего критичного не забыто."
+
+    source = ""
+    if subgoals:
+        source = subgoals[min(max(position, 1), len(subgoals)) - 1]
+    elif constraints:
+        source = constraints[min(max(position, 1), len(constraints)) - 1]
+    if not source:
+        return ""
+
+    if position == 1:
+        return f"Уточни цель и исходные данные для «{domain}», начиная с пункта: {source}."
+    if position == 2:
+        return f"Разложи «{domain}» на основные части и отдельно проработай: {source}."
+    if position == 3:
+        return f"Выполни основную часть задачи «{domain}», опираясь на пункт: {source}."
+    if position == 4:
+        return f"Проверь результат по задаче «{domain}» и уточни пункт: {source}."
+    return f"Сделай финальную проверку для «{domain}» и оставь резерв на пункт: {source}."
+
+
+def _short_phrase(value):
+    words = re.findall(r"[A-Za-zА-Яа-яЁё0-9]+", str(value))
+    if not words:
+        return "этап"
+    return " ".join(words[:4]).lower()
+
 
 
 def _subject_step_title(task, position):
