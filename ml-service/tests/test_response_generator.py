@@ -137,6 +137,20 @@ class RepeatedDescriptionTextGenerator:
         return "Общий текст"
 
 
+class DuplicateTripTextGenerator:
+    def generate(self, prompt, max_chars=220):
+        field = _field_from_prompt(prompt)
+        if field == "summary":
+            return "План поможет организовать поездку без лишних повторов"
+        if field == "schedule_hint":
+            return "Запланируй работу на 5 рабочих блоков по 35 минут и оставь 15 минут на проверку"
+        if field == "step_title":
+            return "Уточнить даты"
+        if field == "step_description":
+            return "Проверь доступные даты для поездки и согласуй их с ограничениями"
+        return "Общий текст"
+
+
 class ResponseGeneratorTest(unittest.TestCase):
     def test_generate_response_keeps_step_count_from_database_template(self):
         result = generate_response(
@@ -456,6 +470,48 @@ class ResponseGeneratorTest(unittest.TestCase):
         self.assertIn("документ", result["plan_draft"][4]["description"])
         _assert_unique_descriptions(self, result)
         _assert_title_description_consistency(self, result)
+        _assert_trip_subgoals_covered(self, result)
+
+    def test_vacation_trip_fallback_covers_missing_subgoals_and_removes_duplicates(self):
+        semantic = {
+            "goal": "организовать отпуск и поездку в Казань",
+            "subgoals": [
+                "выбрать даты поездки",
+                "рассчитать бюджет",
+                "подобрать место проживания",
+                "составить маршрут",
+                "собрать список вещей",
+            ],
+            "constraints": [],
+            "domain": "travel",
+        }
+        result = generate_response(
+            task={
+                "title": "Организовать отпуск и поездку в Казань",
+                "description": "Нужно выбрать даты, рассчитать бюджет, забронировать жилье, составить маршрут и собрать документы",
+                "context": "личная поездка",
+                "estimated_minutes": 180,
+            },
+            prediction=_prediction(blocks=5),
+            template=_generic_time_blocking_template(),
+            text_generator=DuplicateTripTextGenerator(),
+            semantic_structure=semantic,
+        )
+
+        titles = [step["title"] for step in result["plan_draft"]]
+        self.assertEqual(len(titles), len(set(titles)))
+        self.assertEqual(
+            titles,
+            [
+                "Уточнить даты",
+                "Рассчитать бюджет",
+                "Выбрать жилье",
+                "Составить маршрут",
+                "Подготовить вещи и документы",
+            ],
+        )
+        _assert_unique_descriptions(self, result)
+        _assert_trip_subgoals_covered(self, result)
 
 
 def _template():
@@ -498,6 +554,12 @@ def _prediction(blocks=3, focus=35, review=15):
 def _assert_unique_descriptions(test_case, result):
     descriptions = [step["description"] for step in result["plan_draft"]]
     test_case.assertEqual(len(descriptions), len(set(descriptions)))
+
+
+def _assert_trip_subgoals_covered(test_case, result):
+    text = " ".join(f"{step['title']} {step['description']}" for step in result["plan_draft"]).lower()
+    for marker in ("дат", "бюджет", "жиль", "маршрут", "документ"):
+        test_case.assertIn(marker, text)
 
 
 def _assert_title_description_consistency(test_case, result):

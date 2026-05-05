@@ -53,11 +53,14 @@ def parse_semantic_json(text):
 
 
 def normalize_semantics(value):
+    goal = _clean(value.get("goal") or "")
+    subgoals = _clean_list(value.get("subgoals"))
+    constraints = _clean_list(value.get("constraints"))
     return {
-        "goal": _clean(value.get("goal") or ""),
-        "subgoals": _clean_list(value.get("subgoals")),
-        "constraints": _clean_list(value.get("constraints")),
-        "domain": _clean(value.get("domain") or ""),
+        "goal": goal,
+        "subgoals": subgoals,
+        "constraints": constraints,
+        "domain": normalize_domain(value.get("domain") or "", goal, subgoals, constraints),
     }
 
 
@@ -112,13 +115,36 @@ def _extract_clauses(text):
 
 
 def _infer_domain(title, description, context):
-    text = _clean(f"{context} {title} {description}")
-    words = [
-        word
-        for word in re.findall(r"[A-Za-zА-Яа-яЁё0-9]+", text.lower())
-        if len(word) > 3 and word not in {"нужно", "надо", "задача", "сделать", "подготовить"}
-    ]
-    return " ".join(words[:3])
+    return normalize_domain("", title, _extract_clauses(description), [context])
+
+
+def normalize_domain(domain, goal="", subgoals=None, constraints=None):
+    text = _clean(
+        " ".join(
+            [
+                str(domain or ""),
+                str(goal or ""),
+                " ".join(subgoals or []),
+                " ".join(constraints or []),
+            ]
+        )
+    ).lower()
+    if not text:
+        return ""
+    checks = (
+        ("travel", ("отпуск", "поезд", "маршрут", "жиль", "бюджет", "документ", "билет")),
+        ("presentation", ("презентац", "слайд", "выступлен", "доклад")),
+        ("email", ("письм", "почт", "ответ", "адресат")),
+        ("research", ("гипотез", "эксперимент", "критери", "исслед")),
+        ("study", ("учеб", "глава", "конспект", "магистер", "диссертац")),
+    )
+    for code, markers in checks:
+        if any(marker in text for marker in markers):
+            return code
+    raw = _clean(domain).lower()
+    if raw in {"travel", "research", "presentation", "email", "study"}:
+        return raw
+    return "general"
 
 
 def _clean_list(value):

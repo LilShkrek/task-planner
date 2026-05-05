@@ -206,6 +206,11 @@ def _generate_steps(task, prediction, template, steps_template, planning_params,
         for index, step in enumerate(steps):
             step["title"] = _fallback_step_title(task, steps_template[index], index + 1)
             step["description"] = _fallback_step_description(task, steps_template[index], step["title"], index + 1)
+    if _steps_have_duplicates(steps) or _subgoals_not_covered(steps, task):
+        for index, step in enumerate(steps):
+            step["title"] = _fallback_step_title(task, steps_template[index], index + 1)
+            step["description"] = _fallback_step_description(task, steps_template[index], step["title"], index + 1)
+    steps = _ensure_semantic_subgoal_coverage(steps, task)
 
     return steps
 
@@ -445,6 +450,84 @@ def _descriptions_are_not_useful(steps, task=None):
     return False
 
 
+def _steps_have_duplicates(steps):
+    for index, step in enumerate(steps):
+        previous_titles = [previous["title"] for previous in steps[:index]]
+        previous_descriptions = [previous["description"] for previous in steps[:index]]
+        if any(_too_similar(step["title"], title, threshold=0.82) for title in previous_titles):
+            return True
+        if _description_repeats_previous(step["description"], previous_descriptions):
+            return True
+    return False
+
+
+def _subgoals_not_covered(steps, task):
+    subgoals = _semantic_subgoals(task)
+    if len(subgoals) < 2:
+        return False
+    expected = _expected_subgoal_titles(task)
+    if len(expected) >= min(len(steps), len(subgoals)):
+        actual_titles = {_normalized(step["title"]) for step in steps}
+        return any(_normalized(title) not in actual_titles for title in expected[: len(steps)])
+
+    covered = set()
+    step_text = " ".join(f"{step['title']} {step['description']}" for step in steps)
+    for subgoal in subgoals:
+        if _too_similar(step_text, subgoal, threshold=0.5) or _semantic_marker(subgoal) in _normalized(step_text):
+            covered.add(_semantic_marker(subgoal))
+    return len(covered) < min(len(subgoals), len(steps))
+
+
+def _expected_subgoal_titles(task):
+    subgoals = _semantic_subgoals(task) + _semantic_constraints(task)
+    if not subgoals:
+        return []
+    patterns = (
+        (("дат", "срок", "когда"), "Уточнить даты"),
+        (("бюджет", "стоим", "деньг", "расход"), "Рассчитать бюджет"),
+        (("жиль", "прожив", "размещ", "отел", "гостиниц", "квартир"), "Выбрать жилье"),
+        (("маршрут", "план поезд", "локац", "транспорт"), "Составить маршрут"),
+        (("вещ", "документ", "паспорт", "билет"), "Подготовить вещи и документы"),
+    )
+    result = []
+    normalized_items = [_normalized(item) for item in subgoals]
+    for markers, title in patterns:
+        if any(any(marker in item for marker in markers) for item in normalized_items):
+            result.append(title)
+    return result
+
+
+def _ensure_semantic_subgoal_coverage(steps, task):
+    expected_titles = _expected_subgoal_titles(task)
+    if len(expected_titles) < 2:
+        return steps
+
+    required = expected_titles[: len(steps)]
+    actual = {_normalized(step["title"]) for step in steps}
+    if all(_normalized(title) in actual for title in required) and not _steps_have_duplicates(steps):
+        return steps
+
+    fixed = []
+    for index, step in enumerate(steps):
+        if index < len(required):
+            title = required[index]
+            fixed.append(
+                {
+                    **step,
+                    "title": title,
+                    "description": _semantic_step_description(task, title, index + 1),
+                }
+            )
+            continue
+        fixed.append(step)
+    return fixed
+
+
+def _semantic_marker(text):
+    words = list(_content_words(text))
+    return sorted(words)[0] if words else ""
+
+
 def _pairs_are_not_consistent(steps, task):
     return any(not _title_description_consistent(step["title"], step["description"], task) for step in steps)
 
@@ -653,7 +736,7 @@ def _semantic_step_title(task, position):
     patterns = (
         (("дат", "срок", "когда"), "Уточнить даты"),
         (("бюджет", "стоим", "деньг", "расход"), "Рассчитать бюджет"),
-        (("жиль", "отел", "гостиниц", "квартир"), "Выбрать жилье"),
+        (("жиль", "прожив", "размещ", "отел", "гостиниц", "квартир"), "Выбрать жилье"),
         (("маршрут", "план поезд", "локац", "транспорт"), "Составить маршрут"),
         (("вещ", "документ", "паспорт", "билет"), "Подготовить вещи и документы"),
     )
@@ -673,7 +756,7 @@ def _semantic_step_title(task, position):
 def _semantic_step_description(task, title, position):
     subgoals = _semantic_subgoals(task)
     constraints = _semantic_constraints(task)
-    domain = _semantic_domain(task) or _task_title(task)
+    domain = _semantic_display_name(task)
     normalized_title = _normalized(title)
 
     if "дат" in normalized_title:
@@ -711,6 +794,11 @@ def _short_phrase(value):
     if not words:
         return "этап"
     return " ".join(words[:4]).lower()
+
+
+def _semantic_display_name(task):
+    goal = str(_semantic_structure(task).get("goal") or "").strip()
+    return goal or _task_title(task)
 
 
 
