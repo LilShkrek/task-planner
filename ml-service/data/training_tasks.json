@@ -1,0 +1,134 @@
+[
+  {
+    "task": {
+      "title": "Срочно подготовить документы к завтрашней сдаче",
+      "description": "Нужно выбрать главное, убрать второстепенное и успеть до дедлайна",
+      "context": "работа",
+      "priority": 5,
+      "estimated_minutes": 120,
+      "deadline": "2026-05-06T18:00:00Z"
+    },
+    "target_method": "eisenhower",
+    "planning_params": {
+      "focus_minutes": 35,
+      "break_minutes": 8,
+      "block_count": 2,
+      "review_minutes": 20
+    }
+  },
+  {
+    "task": {
+      "title": "Разобрать список мелких личных дел",
+      "description": "Много разрозненных действий, нужно понять следующий шаг",
+      "context": "дом",
+      "priority": 3,
+      "estimated_minutes": 90
+    },
+    "target_method": "gtd",
+    "planning_params": {
+      "focus_minutes": 25,
+      "break_minutes": 5,
+      "block_count": 2,
+      "review_minutes": 15
+    }
+  },
+  {
+    "task": {
+      "title": "Написать конспект по теме рекуррентных сетей",
+      "description": "Нужна спокойная концентрация без переключений",
+      "context": "учеба",
+      "priority": 4,
+      "estimated_minutes": 100
+    },
+    "target_method": "pomodoro",
+    "planning_params": {
+      "focus_minutes": 25,
+      "break_minutes": 5,
+      "block_count": 3,
+      "review_minutes": 15
+    }
+  },
+  {
+    "task": {
+      "title": "Подготовить курсовой раздел за неделю",
+      "description": "Большая задача, нужно распределить работу по дням и блокам",
+      "context": "учеба",
+      "priority": 4,
+      "estimated_minutes": 360,
+      "deadline": "2026-05-12T18:00:00Z"
+    },
+    "target_method": "time_blocking",
+    "planning_params": {
+      "focus_minutes": 50,
+      "break_minutes": 10,
+      "block_count": 4,
+      "review_minutes": 30
+    }
+  },
+  {
+    "task": {
+      "title": "Сформулировать цель изучения английского",
+      "description": "Пока не ясно, какой результат нужен и как его измерить",
+      "context": "саморазвитие",
+      "priority": 2,
+      "estimated_minutes": 60
+    },
+    "target_method": "smart",
+    "planning_params": {
+      "focus_minutes": 30,
+      "break_minutes": 5,
+      "block_count": 1,
+      "review_minutes": 20
+    }
+  },
+  {
+    "task": {
+      "title": "Подготовить презентацию к паре",
+      "description": "Собрать материалы, сделать слайды и проверить выступление",
+      "context": "учеба",
+      "priority": 4,
+      "estimated_minutes": 180,
+      "deadline": "2026-05-10T18:00:00Z"
+    },
+    "target_method": "time_blocking",
+    "planning_params": {
+      "focus_minutes": 45,
+      "break_minutes": 10,
+      "block_count": 3,
+      "review_minutes": 25
+    }
+  },
+  {
+    "task": {
+      "title": "Прочитать главу учебника",
+      "description": "Нужно удерживать внимание и сделать короткие заметки",
+      "context": "учеба",
+      "priority": 3,
+      "estimated_minutes": 80
+    },
+    "target_method": "pomodoro",
+    "planning_params": {
+      "focus_minutes": 25,
+      "break_minutes": 5,
+      "block_count": 2,
+      "review_minutes": 10
+    }
+  },
+  {
+    "task": {
+      "title": "Закрыть важную задачу сегодня",
+      "description": "Дедлайн близко, нужно выделить самое важное действие",
+      "context": "работа",
+      "priority": 5,
+      "estimated_minutes": 150,
+      "deadline": "2026-05-05T20:00:00Z"
+    },
+    "target_method": "eisenhower",
+    "planning_params": {
+      "focus_minutes": 40,
+      "break_minutes": 8,
+      "block_count": 2,
+      "review_minutes": 20
+    }
+  }
+]

@@ -11,7 +11,7 @@ MODELS = {}
 def choose_method(task, sequence_state, methods):
     task_features = _task_features(task, sequence_state)
     method_codes = [method["code"] for method in methods]
-    model = _model_for(len(method_codes))
+    model = _model_for(method_codes)
 
     with torch.no_grad():
         output = model(sequence_state["tensor"], task_features["tensor"])
@@ -37,10 +37,11 @@ def choose_method(task, sequence_state, methods):
     }
 
 
-def _model_for(method_count):
-    if method_count not in MODELS:
-        MODELS[method_count] = build_model(method_count)
-    return MODELS[method_count]
+def _model_for(method_codes):
+    cache_key = tuple(method_codes)
+    if cache_key not in MODELS:
+        MODELS[cache_key] = build_model(len(method_codes), method_codes=method_codes)
+    return MODELS[cache_key]
 
 
 def _task_features(task, sequence_state):

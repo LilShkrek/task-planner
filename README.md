@@ -62,13 +62,36 @@ pip install -r requirements.txt
 python -m app.main
 ```
 
-ML service использует CPU-версию PyTorch. Полноценного обучения на датасете пока нет: модель создается с фиксированной начальной инициализацией и работает в режиме inference.
+ML service использует CPU-версию PyTorch. Обучение пока учебное: используется небольшой JSON-датасет, без полноценной оценки качества и без подбора гиперпараметров.
 
 Для локального запуска ML service без Docker нужен доступ к PostgreSQL и переменная:
 
 ```bash
 export ML_DATABASE_URL="postgres://task_planner:task_planner@localhost:5432/task_planner?sslmode=disable"
 ```
+
+### Обучение ML-модели
+
+В проекте есть небольшой учебный датасет:
+
+```text
+ml-service/data/training_tasks.json
+```
+
+Запуск обучения через Docker:
+
+```bash
+docker compose run --rm ml-service python -m app.training.train
+```
+
+Скрипт:
+
+- загружает методы тайм-менеджмента из PostgreSQL;
+- читает учебные примеры задач и целевые методы;
+- обучает текущую PyTorch-модель `GRU + dense/perceptron`;
+- сохраняет веса в `ml-service/artifacts/time_management_model.pt`.
+
+При запуске ML service пытается загрузить файл весов из `MODEL_PATH`. Если файла нет, сервис работает с начальной инициализацией и не падает.
 
 Если база уже была создана до добавления новых seed-шаблонов, пересоздай volume для учебного стенда:
 
@@ -81,6 +104,6 @@ docker compose up --build
 
 1. Добавить мигратор или автоматический запуск миграций.
 2. Добавить регистрацию и авторизацию пользователей.
-3. Подготовить небольшой учебный датасет и добавить обучение PyTorch-модели.
+3. Расширить учебный датасет и добавить метрики качества модели.
 4. Добавить реальные тесты для Go backend и Python ML service.
 5. Добавить frontend.
