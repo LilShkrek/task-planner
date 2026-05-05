@@ -32,6 +32,7 @@ type MLRecommendation struct {
 	Reason         string             `json:"reason"`
 	Scores         map[string]float64 `json:"scores"`
 	PlanningParams PlanningParams     `json:"planning_params"`
+	Summary        string             `json:"summary"`
 	PlanDraft      []PlanStep         `json:"plan_draft"`
 	ScheduleHint   string             `json:"schedule_hint"`
 }

@@ -27,15 +27,15 @@ func main() {
 	defer db.Close()
 
 	taskRepo := repository.NewTaskRepository(db)
-	mlClient := ml.NewClient(cfg.MLServiceURL, 5*time.Second)
+	mlClient := ml.NewClient(cfg.MLServiceURL, cfg.MLServiceTimeout)
 	planBuilder := planner.NewBuilder()
 	handler := api.NewHandler(taskRepo, mlClient, planBuilder)
 
 	server := &http.Server{
 		Addr:         cfg.ServerAddr,
 		Handler:      handler.Routes(),
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  cfg.ServerReadTimeout,
+		WriteTimeout: cfg.ServerWriteTimeout,
 	}
 
 	go func() {

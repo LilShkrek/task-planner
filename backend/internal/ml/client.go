@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -15,6 +18,7 @@ import (
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
+	timeout    time.Duration
 }
 
 func NewClient(baseURL string, timeout time.Duration) *Client {
@@ -23,7 +27,21 @@ func NewClient(baseURL string, timeout time.Duration) *Client {
 		httpClient: &http.Client{
 			Timeout: timeout,
 		},
+		timeout: timeout,
 	}
+}
+
+var ErrTimeout = errors.New("таймаут ML service")
+
+func IsTimeout(err error) bool {
+	if errors.Is(err, ErrTimeout) {
+		return true
+	}
+	if errors.Is(err, context.DeadlineExceeded) || os.IsTimeout(err) {
+		return true
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr) && netErr.Timeout()
 }
 
 func (c *Client) AnalyzeTask(ctx context.Context, task domain.Task) (domain.MLRecommendation, error) {
@@ -40,6 +58,9 @@ func (c *Client) AnalyzeTask(ctx context.Context, task domain.Task) (domain.MLRe
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		if IsTimeout(err) {
+			return domain.MLRecommendation{}, fmt.Errorf("%w после %s: %v", ErrTimeout, c.timeout, err)
+		}
 		return domain.MLRecommendation{}, err
 	}
 	defer resp.Body.Close()

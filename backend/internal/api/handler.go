@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"task-planner/backend/internal/domain"
+	mlclient "task-planner/backend/internal/ml"
 )
 
 type TaskStore interface {
@@ -68,6 +69,10 @@ func (h *Handler) createTaskPlan(w http.ResponseWriter, r *http.Request) {
 
 	recommendation, err := h.ml.AnalyzeTask(r.Context(), task)
 	if err != nil {
+		if mlclient.IsTimeout(err) {
+			writeError(w, http.StatusGatewayTimeout, "ML service не успел обработать задачу за отведенное время")
+			return
+		}
 		writeError(w, http.StatusBadGateway, "не удалось получить рекомендацию ML service")
 		return
 	}

@@ -1,6 +1,5 @@
 from app.catalog.repository import load_catalog
-from app.planning.generator import generate_plan
-from app.planning.scheduler import build_schedule_hint
+from app.generation.response_generator import generate_response
 from app.models.recurrent import encode_text_sequence
 from app.models.perceptron import choose_method
 
@@ -13,8 +12,10 @@ def analyze_task(task):
     catalog = load_catalog()
     sequence_state = encode_text_sequence(text)
     prediction = choose_method(task, sequence_state, catalog["methods"])
-    plan_draft = generate_plan(task, prediction, catalog["templates"])
-    schedule_hint = build_schedule_hint(task, prediction, catalog["templates"])
+    template = catalog["templates"].get(prediction["method_code"])
+    if not template:
+        raise RuntimeError(f"в БД нет шаблона плана для метода {prediction['method_code']}")
+    generated = generate_response(task, prediction, template)
 
     return {
         "method_code": prediction["method_code"],
@@ -23,6 +24,7 @@ def analyze_task(task):
         "reason": prediction["reason"],
         "scores": prediction["scores"],
         "planning_params": prediction["planning_params"],
-        "plan_draft": plan_draft,
-        "schedule_hint": schedule_hint,
+        "summary": generated["summary"],
+        "plan_draft": generated["plan_draft"],
+        "schedule_hint": generated["schedule_hint"],
     }

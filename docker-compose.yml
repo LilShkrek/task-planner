@@ -23,6 +23,11 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgres://task_planner:task_planner@db:5432/task_planner?sslmode=disable}
       ML_DATABASE_URL: ${ML_DATABASE_URL:-postgres://task_planner:task_planner@db:5432/task_planner?sslmode=disable}
       MODEL_PATH: ${MODEL_PATH:-/app/artifacts/time_management_model.pt}
+      GENERATIVE_MODEL_NAME: ${GENERATIVE_MODEL_NAME:-cointegrated/rut5-base-multitask}
+      GENERATIVE_MODEL_CACHE: ${GENERATIVE_MODEL_CACHE:-/app/model-cache}
+      GENERATIVE_MAX_INPUT_TOKENS: ${GENERATIVE_MAX_INPUT_TOKENS:-384}
+      GENERATIVE_MAX_NEW_TOKENS: ${GENERATIVE_MAX_NEW_TOKENS:-64}
+      GENERATIVE_NUM_BEAMS: ${GENERATIVE_NUM_BEAMS:-1}
       ML_SERVICE_ADDR: ${ML_SERVICE_ADDR:-0.0.0.0}
       ML_SERVICE_PORT: ${ML_SERVICE_PORT:-8090}
     ports:
@@ -43,8 +48,11 @@ services:
       context: ./backend
     environment:
       SERVER_ADDR: ${SERVER_ADDR:-:8080}
+      SERVER_READ_TIMEOUT_SECONDS: ${SERVER_READ_TIMEOUT_SECONDS:-10}
+      SERVER_WRITE_TIMEOUT_SECONDS: ${SERVER_WRITE_TIMEOUT_SECONDS:-120}
       DATABASE_URL: ${DATABASE_URL:-postgres://task_planner:task_planner@db:5432/task_planner?sslmode=disable}
       ML_SERVICE_URL: ${ML_SERVICE_URL:-http://ml-service:8090}
+      ML_SERVICE_TIMEOUT_SECONDS: ${ML_SERVICE_TIMEOUT_SECONDS:-90}
     ports:
       - "8080:8080"
     depends_on:

@@ -4,5 +4,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
+RUN python -m app.generation.download_model
 EXPOSE 8090
 CMD ["python", "-m", "app.main"]

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"task-planner/backend/internal/domain"
+	mlclient "task-planner/backend/internal/ml"
 	"task-planner/backend/internal/planner"
 )
 
@@ -91,6 +92,9 @@ func TestCreateTaskPlanSavesTaskAndPlan(t *testing.T) {
 	if store.savedPlan.MethodCode != "pomodoro" {
 		t.Fatalf("ожидался метод pomodoro, получен %s", store.savedPlan.MethodCode)
 	}
+	if store.savedPlan.Summary != "Сгенерированный ML service summary" {
+		t.Fatalf("backend должен использовать summary из ML service, получено: %s", store.savedPlan.Summary)
+	}
 
 	var payload map[string]json.RawMessage
 	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
@@ -132,6 +136,31 @@ func TestCreateTaskPlanHandlesMLError(t *testing.T) {
 	}
 }
 
+func TestCreateTaskPlanHandlesMLTimeout(t *testing.T) {
+	store := &fakeStore{}
+	handler := NewHandler(store, fakeAnalyzer{err: mlclient.ErrTimeout}, planner.NewBuilder())
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/tasks/plan", bytes.NewBufferString(`{
+		"title": "Подготовить доклад",
+		"priority": 3,
+		"estimated_minutes": 60
+	}`))
+	request.Header.Set("Content-Type", "application/json")
+
+	handler.Routes().ServeHTTP(response, request)
+
+	if response.Code != http.StatusGatewayTimeout {
+		t.Fatalf("ожидался статус %d, получен %d", http.StatusGatewayTimeout, response.Code)
+	}
+	if store.createdTask.ID == 0 {
+		t.Fatalf("задача должна быть сохранена до вызова ML service")
+	}
+	if store.saveCalled {
+		t.Fatalf("план не должен сохраняться при таймауте ML service")
+	}
+}
+
 func testRecommendation() domain.MLRecommendation {
 	return domain.MLRecommendation{
 		MethodCode: "pomodoro",
@@ -147,6 +176,7 @@ func testRecommendation() domain.MLRecommendation {
 			BlockCount:    2,
 			ReviewMinutes: 15,
 		},
+		Summary: "Сгенерированный ML service summary",
 		PlanDraft: []domain.PlanStep{
 			{
 				Title:            "Начать работу",

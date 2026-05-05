@@ -2,6 +2,7 @@ package planner
 
 import (
 	"fmt"
+	"strings"
 
 	"task-planner/backend/internal/domain"
 )
@@ -21,10 +22,17 @@ func (b *Builder) Build(task domain.Task, recommendation domain.MLRecommendation
 	return domain.Plan{
 		TaskID:       task.ID,
 		MethodCode:   recommendation.MethodCode,
-		Summary:      fmt.Sprintf("План для задачи %q по методу %s. Причина выбора: %s", task.Title, recommendation.MethodName, recommendation.Reason),
+		Summary:      summary(task, recommendation),
 		ScheduleHint: recommendation.ScheduleHint,
 		Steps:        normalizeSteps(steps, task.EstimatedMinutes),
 	}
+}
+
+func summary(task domain.Task, recommendation domain.MLRecommendation) string {
+	if strings.TrimSpace(recommendation.Summary) != "" {
+		return recommendation.Summary
+	}
+	return fmt.Sprintf("План для задачи %q по методу %s. Причина выбора: %s", task.Title, recommendation.MethodName, recommendation.Reason)
 }
 
 func normalizeSteps(steps []domain.PlanStep, totalMinutes int) []domain.PlanStep {
