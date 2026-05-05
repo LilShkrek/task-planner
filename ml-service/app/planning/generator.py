@@ -1,3 +1,6 @@
+from app.planning.adapter import adapt_steps
+
+
 def generate_plan(task, prediction, templates):
     method_code = prediction["method_code"]
     template = templates.get(method_code)
@@ -12,10 +15,11 @@ def generate_plan(task, prediction, templates):
     planning_params = prediction.get("planning_params", {})
     default_minutes = max(15, estimated // len(steps))
 
-    return [
+    built_steps = [
         _build_step(task, step, index + 1, default_minutes, planning_params, len(steps))
         for index, step in enumerate(steps)
     ]
+    return adapt_steps(task, built_steps)
 
 
 def _build_step(task, step, position, default_minutes, planning_params, total_steps):
