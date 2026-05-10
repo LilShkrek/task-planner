@@ -17,9 +17,27 @@ class FakeModel:
 class PerceptronTest(unittest.TestCase):
     def test_choose_method_uses_highest_method_score(self):
         methods = [
-            {"code": "eisenhower", "name": "Матрица Эйзенхауэра", "best_for": "важные задачи"},
-            {"code": "pomodoro", "name": "Pomodoro", "best_for": "фокус-сессии"},
-            {"code": "smart", "name": "SMART", "best_for": "уточнение цели"},
+            {
+                "code": "eisenhower",
+                "name": "Матрица Эйзенхауэра",
+                "best_for": "важные задачи",
+                "group": "приоритизация",
+                "role": "выбирает важное и срочное",
+            },
+            {
+                "code": "pomodoro",
+                "name": "Pomodoro",
+                "best_for": "фокус-сессии",
+                "group": "распределение времени",
+                "role": "задает ритм фокус-сессий",
+            },
+            {
+                "code": "smart",
+                "name": "SMART",
+                "best_for": "уточнение цели",
+                "group": "формулировка цели",
+                "role": "уточняет измеримую цель",
+            },
         ]
         task = {"priority": 3, "estimated_minutes": 120}
         sequence_state = {
@@ -35,6 +53,9 @@ class PerceptronTest(unittest.TestCase):
         self.assertEqual(prediction["scores"]["pomodoro"], 3.0)
         self.assertGreater(prediction["confidence"], 0.8)
         self.assertEqual(prediction["planning_params"]["focus_minutes"], 40)
+        self.assertEqual(prediction["ranked_methods"][0]["code"], "pomodoro")
+        self.assertGreaterEqual(len(prediction["selected_methods"]), 3)
+        self.assertIn("Комбинация выбрана", prediction["explanation"])
 
 
 if __name__ == "__main__":

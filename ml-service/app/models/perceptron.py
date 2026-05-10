@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 import torch
 
+from app.models.multi_method import build_ranked_methods, select_methods
 from app.models.network import build_model
 
 
@@ -25,6 +26,8 @@ def choose_method(task, sequence_state, methods):
         method_codes[index]: round(float(method_scores[index].item()), 4)
         for index in range(len(method_codes))
     }
+    ranked_methods = build_ranked_methods(methods, method_scores, probabilities)
+    selection = select_methods(ranked_methods, task)
 
     return {
         "method_code": method["code"],
@@ -32,6 +35,9 @@ def choose_method(task, sequence_state, methods):
         "confidence": round(float(probabilities[method_index].item()), 3),
         "reason": _reason(method, task_features["values"]),
         "scores": scores,
+        "ranked_methods": ranked_methods,
+        "selected_methods": selection["selected_methods"],
+        "explanation": selection["explanation"],
         "planning_params": _planning_params(planning_vector),
         "features": task_features["values"],
     }

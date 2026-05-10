@@ -106,6 +106,16 @@ func TestCreateTaskPlanSavesTaskAndPlan(t *testing.T) {
 	if _, ok := payload["recommendation"]; !ok {
 		t.Fatalf("ответ не содержит recommendation")
 	}
+	var recommendation domain.MLRecommendation
+	if err := json.Unmarshal(payload["recommendation"], &recommendation); err != nil {
+		t.Fatalf("recommendation не разбирается: %v", err)
+	}
+	if len(recommendation.SelectedMethods) != 3 {
+		t.Fatalf("ожидалась комбинация из 3 методов, получено %d", len(recommendation.SelectedMethods))
+	}
+	if recommendation.Explanation == "" {
+		t.Fatalf("ответ должен содержать explanation по выбранной комбинации")
+	}
 	if _, ok := payload["plan"]; !ok {
 		t.Fatalf("ответ не содержит plan")
 	}
@@ -170,6 +180,17 @@ func testRecommendation() domain.MLRecommendation {
 		Scores: map[string]float64{
 			"pomodoro": 1.5,
 		},
+		RankedMethods: []domain.MethodCandidate{
+			{Code: "pomodoro", Name: "Pomodoro", Group: "распределение времени", Role: "задает ритм фокус-сессий", Score: 1.5},
+			{Code: "smart", Name: "SMART", Group: "формулировка цели", Role: "уточняет измеримую цель", Score: 1.2},
+			{Code: "checklist", Name: "Checklist Method", Group: "контроль / завершение", Role: "проверяет обязательные пункты", Score: 1.0},
+		},
+		SelectedMethods: []domain.MethodCandidate{
+			{Code: "pomodoro", Name: "Pomodoro", Group: "распределение времени", Role: "задает ритм фокус-сессий", Score: 1.5},
+			{Code: "smart", Name: "SMART", Group: "формулировка цели", Role: "уточняет измеримую цель", Score: 1.2},
+			{Code: "checklist", Name: "Checklist Method", Group: "контроль / завершение", Role: "проверяет обязательные пункты", Score: 1.0},
+		},
+		Explanation: "Комбинация выбрана по высоким scores модели и разным ролям методов.",
 		PlanningParams: domain.PlanningParams{
 			FocusMinutes:  25,
 			BreakMinutes:  5,

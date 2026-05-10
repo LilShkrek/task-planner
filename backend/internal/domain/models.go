@@ -26,16 +26,29 @@ type Task struct {
 }
 
 type MLRecommendation struct {
-	MethodCode     string             `json:"method_code"`
-	MethodName     string             `json:"method_name"`
-	Confidence     float64            `json:"confidence"`
-	Reason         string             `json:"reason"`
-	Scores         map[string]float64 `json:"scores"`
-	PlanningParams PlanningParams     `json:"planning_params"`
-	Summary        string             `json:"summary"`
-	PlanDraft      []PlanStep         `json:"plan_draft"`
-	ScheduleHint   string             `json:"schedule_hint"`
-	Semantic       SemanticStructure  `json:"semantic_structure,omitempty"`
+	MethodCode      string             `json:"method_code"`
+	MethodName      string             `json:"method_name"`
+	Confidence      float64            `json:"confidence"`
+	Reason          string             `json:"reason"`
+	Scores          map[string]float64 `json:"scores"`
+	RankedMethods   []MethodCandidate  `json:"ranked_methods,omitempty"`
+	SelectedMethods []MethodCandidate  `json:"selected_methods,omitempty"`
+	Explanation     string             `json:"explanation,omitempty"`
+	PlanningParams  PlanningParams     `json:"planning_params"`
+	Summary         string             `json:"summary"`
+	PlanDraft       []PlanStep         `json:"plan_draft"`
+	ScheduleHint    string             `json:"schedule_hint"`
+	Semantic        SemanticStructure  `json:"semantic_structure,omitempty"`
+}
+
+type MethodCandidate struct {
+	Code        string  `json:"code"`
+	Name        string  `json:"name"`
+	Description string  `json:"description,omitempty"`
+	Group       string  `json:"group,omitempty"`
+	Role        string  `json:"role,omitempty"`
+	Score       float64 `json:"score,omitempty"`
+	Confidence  float64 `json:"confidence,omitempty"`
 }
 
 type SemanticStructure struct {

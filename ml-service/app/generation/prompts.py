@@ -13,7 +13,7 @@ def build_generation_prompt(
     title = _clean(task.get("title") or "задача")
     description = _clean(task.get("description") or "")
     context = _clean(task.get("context") or "")
-    method = prediction.get("method_name") or prediction.get("method_code") or ""
+    method = _method_hint(prediction)
     subject_entities = _subject_entities(title, description, context)
     entities_hint = ", ".join(subject_entities) if subject_entities else "не выделены"
     semantic_hint = _semantic_hint(semantic_structure)
@@ -71,7 +71,7 @@ def build_generation_prompt(
                 f"Номер шага: {step_index}.",
                 f"Базовый шаг из шаблона: {step_text}.",
                 f"Уже использованные заголовки: {used}.",
-                "Требования: 2-5 слов; начни с глагола действия; используй предметную сущность, если она есть; не пиши про блоки времени.",
+                "Требования: 2-5 слов; начни с глагола действия; учитывай метод этапа; используй предметную сущность, если она есть; не пиши про блоки времени.",
                 strict_hint,
             ]
         )
@@ -88,12 +88,23 @@ def build_generation_prompt(
                 f"Семантическая структура: {semantic_hint}.",
                 f"Номер шага: {step_index}.",
                 f"Базовый шаг из шаблона: {step_text}.",
-                "Требования: 1 короткое предложение; опиши действие вокруг предметной сущности; не повторяй описание задачи целиком.",
+                "Требования: 1 короткое предложение; свяжи действие с методом этапа и предметной сущностью; не повторяй описание задачи целиком.",
                 strict_hint,
             ]
         )
 
     return f"headline | {title}. {description}"
+
+
+def _method_hint(prediction):
+    selected = prediction.get("selected_methods") or []
+    if selected:
+        parts = [
+            f"{item.get('name', item.get('code', 'метод'))} ({item.get('group', 'этап')}: {item.get('role', 'роль')})"
+            for item in selected[:5]
+        ]
+        return "комбинация методов: " + "; ".join(parts)
+    return prediction.get("method_name") or prediction.get("method_code") or ""
 
 
 def _clean(value):
@@ -143,5 +154,9 @@ def _step_text(step_template, step_index):
     if isinstance(step_template, dict):
         title = step_template.get("title") or f"Шаг {step_index}"
         description = step_template.get("description") or ""
-        return f"{title}. {description}"
+        method = step_template.get("method_name") or ""
+        group = step_template.get("method_group") or ""
+        role = step_template.get("method_role") or ""
+        method_text = f" Метод этапа: {method}; группа: {group}; роль: {role}." if method else ""
+        return f"{title}. {description}{method_text}"
     return f"Шаг {step_index}"
