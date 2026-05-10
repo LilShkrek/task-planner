@@ -50,7 +50,13 @@ class PipelineMultiMethodTest(unittest.TestCase):
 
         self.assertEqual(len(result["selected_methods"]), 5)
         self.assertEqual(len(result["plan_draft"]), 5)
+        self.assertEqual(result["selection_mode"], "multi_method")
+        self.assertEqual(result["primary_method_code"], result["method_code"])
+        self.assertIn("совместимости", result["legacy_method_note"])
+        self.assertGreater(result["combination_confidence"], 0)
         self.assertIn("ranked_methods", result)
+        self.assertIn("лучше одного метода", result["explanation"])
+        self.assert_plan_matches_selected_methods(result)
         self.assertIn("слайд", result["plan_draft"][0]["description"].lower())
 
     def test_experiment_task_keeps_subject_steps(self):
@@ -74,6 +80,7 @@ class PipelineMultiMethodTest(unittest.TestCase):
         self.assertIn("гипотез", text)
         self.assertIn("эксперимент", text)
         self.assertIn("selected_methods", result)
+        self.assert_plan_matches_selected_methods(result)
 
     def test_travel_task_covers_travel_subgoals_with_selected_methods(self):
         result = self._analyze(
@@ -104,6 +111,7 @@ class PipelineMultiMethodTest(unittest.TestCase):
         self.assertIn("жиль", text)
         self.assertIn("маршрут", text)
         self.assertIn("документ", text)
+        self.assert_plan_matches_selected_methods(result)
 
     def test_short_urgent_task_selects_compact_combination(self):
         result = self._analyze(
@@ -125,6 +133,28 @@ class PipelineMultiMethodTest(unittest.TestCase):
         self.assertEqual(len(result["selected_methods"]), 3)
         self.assertEqual(len(result["plan_draft"]), 3)
         self.assertIn("Комбинация выбрана", result["explanation"])
+        self.assertEqual(result["selection_mode"], "multi_method")
+        self.assert_plan_matches_selected_methods(result)
+        self.assertEqual(
+            {method["plan_stage"] for method in result["selected_methods"]},
+            {"prioritization", "execution_time", "review_control"},
+        )
+
+    def assert_plan_matches_selected_methods(self, result):
+        selected = result["selected_methods"]
+        steps = result["plan_draft"]
+        self.assertGreaterEqual(len(selected), 3)
+        self.assertLessEqual(len(selected), 5)
+        self.assertEqual(len({method["plan_stage"] for method in selected}), len(selected))
+        self.assertEqual(len(selected), len(steps))
+        for method, step in zip(selected, steps):
+            self.assertEqual(step["method_code"], method["code"])
+            self.assertEqual(step["method_name"], method["name"])
+            self.assertEqual(step["method_role"], method["role"])
+            self.assertEqual(step["plan_stage"], method["plan_stage"])
+            self.assertEqual(step["plan_function"], method["plan_function"])
+            self.assertIn(method["name"], result["explanation"])
+            self.assertIn(method["plan_function"], result["explanation"])
 
     def _analyze(self, task, semantic_structure):
         with patch.object(pipeline, "load_catalog", return_value=_catalog()):

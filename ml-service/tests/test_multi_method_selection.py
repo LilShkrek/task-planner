@@ -13,8 +13,11 @@ class MultiMethodSelectionTest(unittest.TestCase):
         selected = result["selected_methods"]
         self.assertEqual(len(selected), 5)
         self.assertEqual(len({method["group"] for method in selected}), 5)
+        self.assertEqual(len({method["plan_stage"] for method in selected}), 5)
         self.assertIn("формулировка цели", {method["group"] for method in selected})
         self.assertIn("контроль / завершение", {method["group"] for method in selected})
+        self.assertGreater(result["combination_confidence"], 0)
+        self.assertIn("лучше одного метода", result["explanation"])
 
     def test_selects_three_methods_for_short_urgent_task(self):
         result = select_methods(
@@ -25,7 +28,10 @@ class MultiMethodSelectionTest(unittest.TestCase):
         selected = result["selected_methods"]
         self.assertEqual(len(selected), 3)
         self.assertEqual(len({method["code"] for method in selected}), 3)
-        self.assertIn("приоритизация", {method["group"] for method in selected})
+        self.assertEqual(
+            {method["plan_stage"] for method in selected},
+            {"prioritization", "execution_time", "review_control"},
+        )
 
     def test_selection_does_not_duplicate_roles_before_covering_groups(self):
         ranked = _ranked_methods() + [
@@ -41,8 +47,10 @@ class MultiMethodSelectionTest(unittest.TestCase):
 
         result = select_methods(ranked, {"estimated_minutes": 140, "priority": 3})
         roles = [method["role"] for method in result["selected_methods"]]
+        stages = [method["plan_stage"] for method in result["selected_methods"]]
 
         self.assertEqual(len(roles), len(set(roles)))
+        self.assertEqual(len(stages), len(set(stages)))
 
 
 def _ranked_methods():

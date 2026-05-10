@@ -193,6 +193,7 @@ def _generate_steps(task, prediction, template, steps_template, planning_params,
                 "description": description,
                 "estimated_minutes": max(15, int(minutes)),
                 "status": "pending",
+                **_step_metadata(step_template),
             }
         )
 
@@ -257,6 +258,16 @@ def _step_minutes(step_template, default_minutes):
     if isinstance(step_template, dict) and step_template.get("estimated_minutes"):
         return step_template["estimated_minutes"]
     return default_minutes
+
+
+def _step_metadata(step_template):
+    if not isinstance(step_template, dict):
+        return {}
+    result = {}
+    for key in ("plan_stage", "plan_function", "method_code", "method_name", "method_group", "method_role"):
+        if step_template.get(key):
+            result[key] = step_template[key]
+    return result
 
 
 def _valid_summary(text, task):

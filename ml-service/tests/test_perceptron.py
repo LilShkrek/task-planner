@@ -55,6 +55,9 @@ class PerceptronTest(unittest.TestCase):
         self.assertEqual(prediction["planning_params"]["focus_minutes"], 40)
         self.assertEqual(prediction["ranked_methods"][0]["code"], "pomodoro")
         self.assertGreaterEqual(len(prediction["selected_methods"]), 3)
+        self.assertEqual(prediction["selection_mode"], "multi_method")
+        self.assertGreater(prediction["combination_confidence"], 0)
+        self.assertIn("GRU/dense", prediction["planning_params_source"])
         self.assertIn("Комбинация выбрана", prediction["explanation"])
 
 

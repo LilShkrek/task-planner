@@ -116,6 +116,18 @@ func TestCreateTaskPlanSavesTaskAndPlan(t *testing.T) {
 	if recommendation.Explanation == "" {
 		t.Fatalf("ответ должен содержать explanation по выбранной комбинации")
 	}
+	if recommendation.SelectionMode != "multi_method" {
+		t.Fatalf("ожидался multi_method режим, получено %q", recommendation.SelectionMode)
+	}
+	if recommendation.PrimaryMethodCode != recommendation.MethodCode {
+		t.Fatalf("primary_method_code должен совпадать с legacy method_code")
+	}
+	if recommendation.CombinationConfidence <= 0 {
+		t.Fatalf("combination_confidence должен быть положительным")
+	}
+	if len(recommendation.PlanDraft) == 0 || recommendation.PlanDraft[0].MethodCode == "" {
+		t.Fatalf("шаги должны содержать вклад выбранного метода")
+	}
 	if _, ok := payload["plan"]; !ok {
 		t.Fatalf("ответ не содержит plan")
 	}
@@ -173,24 +185,30 @@ func TestCreateTaskPlanHandlesMLTimeout(t *testing.T) {
 
 func testRecommendation() domain.MLRecommendation {
 	return domain.MLRecommendation{
-		MethodCode: "pomodoro",
-		MethodName: "Pomodoro",
-		Confidence: 0.91,
-		Reason:     "тестовая рекомендация",
+		MethodCode:              "pomodoro",
+		MethodName:              "Pomodoro",
+		Confidence:              0.91,
+		PrimaryMethodCode:       "pomodoro",
+		PrimaryMethodName:       "Pomodoro",
+		PrimaryMethodConfidence: 0.91,
+		LegacyMethodNote:        "method_code/method_name оставлены для совместимости",
+		SelectionMode:           "multi_method",
+		CombinationConfidence:   0.42,
+		Reason:                  "тестовая рекомендация",
 		Scores: map[string]float64{
 			"pomodoro": 1.5,
 		},
 		RankedMethods: []domain.MethodCandidate{
-			{Code: "pomodoro", Name: "Pomodoro", Group: "распределение времени", Role: "задает ритм фокус-сессий", Score: 1.5},
-			{Code: "smart", Name: "SMART", Group: "формулировка цели", Role: "уточняет измеримую цель", Score: 1.2},
-			{Code: "checklist", Name: "Checklist Method", Group: "контроль / завершение", Role: "проверяет обязательные пункты", Score: 1.0},
+			{Code: "pomodoro", Name: "Pomodoro", Group: "распределение времени", Role: "задает ритм фокус-сессий", PlanStage: "execution_time", PlanFunction: "распределение времени и выполнение", Score: 1.5},
+			{Code: "smart", Name: "SMART", Group: "формулировка цели", Role: "уточняет измеримую цель", PlanStage: "goal_definition", PlanFunction: "постановка цели", Score: 1.2},
+			{Code: "checklist", Name: "Checklist Method", Group: "контроль / завершение", Role: "проверяет обязательные пункты", PlanStage: "review_control", PlanFunction: "контроль и завершение", Score: 1.0},
 		},
 		SelectedMethods: []domain.MethodCandidate{
-			{Code: "pomodoro", Name: "Pomodoro", Group: "распределение времени", Role: "задает ритм фокус-сессий", Score: 1.5},
-			{Code: "smart", Name: "SMART", Group: "формулировка цели", Role: "уточняет измеримую цель", Score: 1.2},
-			{Code: "checklist", Name: "Checklist Method", Group: "контроль / завершение", Role: "проверяет обязательные пункты", Score: 1.0},
+			{Code: "pomodoro", Name: "Pomodoro", Group: "распределение времени", Role: "задает ритм фокус-сессий", PlanStage: "execution_time", PlanFunction: "распределение времени и выполнение", Score: 1.5},
+			{Code: "smart", Name: "SMART", Group: "формулировка цели", Role: "уточняет измеримую цель", PlanStage: "goal_definition", PlanFunction: "постановка цели", Score: 1.2},
+			{Code: "checklist", Name: "Checklist Method", Group: "контроль / завершение", Role: "проверяет обязательные пункты", PlanStage: "review_control", PlanFunction: "контроль и завершение", Score: 1.0},
 		},
-		Explanation: "Комбинация выбрана по высоким scores модели и разным ролям методов.",
+		Explanation: "Комбинация выбрана по высоким scores модели, покрывает роли и лучше одного метода.",
 		PlanningParams: domain.PlanningParams{
 			FocusMinutes:  25,
 			BreakMinutes:  5,
@@ -203,11 +221,23 @@ func testRecommendation() domain.MLRecommendation {
 				Title:            "Начать работу",
 				Description:      "Сделать первый шаг",
 				EstimatedMinutes: 30,
+				PlanStage:        "execution_time",
+				PlanFunction:     "распределение времени и выполнение",
+				MethodCode:       "pomodoro",
+				MethodName:       "Pomodoro",
+				MethodGroup:      "распределение времени",
+				MethodRole:       "задает ритм фокус-сессий",
 			},
 			{
 				Title:            "Проверить результат",
 				Description:      "Сверить итог",
 				EstimatedMinutes: 15,
+				PlanStage:        "review_control",
+				PlanFunction:     "контроль и завершение",
+				MethodCode:       "checklist",
+				MethodName:       "Checklist Method",
+				MethodGroup:      "контроль / завершение",
+				MethodRole:       "проверяет обязательные пункты",
 			},
 		},
 		ScheduleHint: "Работать короткими сессиями.",

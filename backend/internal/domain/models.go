@@ -26,29 +26,38 @@ type Task struct {
 }
 
 type MLRecommendation struct {
-	MethodCode      string             `json:"method_code"`
-	MethodName      string             `json:"method_name"`
-	Confidence      float64            `json:"confidence"`
-	Reason          string             `json:"reason"`
-	Scores          map[string]float64 `json:"scores"`
-	RankedMethods   []MethodCandidate  `json:"ranked_methods,omitempty"`
-	SelectedMethods []MethodCandidate  `json:"selected_methods,omitempty"`
-	Explanation     string             `json:"explanation,omitempty"`
-	PlanningParams  PlanningParams     `json:"planning_params"`
-	Summary         string             `json:"summary"`
-	PlanDraft       []PlanStep         `json:"plan_draft"`
-	ScheduleHint    string             `json:"schedule_hint"`
-	Semantic        SemanticStructure  `json:"semantic_structure,omitempty"`
+	MethodCode              string             `json:"method_code"`
+	MethodName              string             `json:"method_name"`
+	Confidence              float64            `json:"confidence"`
+	PrimaryMethodCode       string             `json:"primary_method_code,omitempty"`
+	PrimaryMethodName       string             `json:"primary_method_name,omitempty"`
+	PrimaryMethodConfidence float64            `json:"primary_method_confidence,omitempty"`
+	LegacyMethodNote        string             `json:"legacy_method_note,omitempty"`
+	SelectionMode           string             `json:"selection_mode,omitempty"`
+	CombinationConfidence   float64            `json:"combination_confidence,omitempty"`
+	Reason                  string             `json:"reason"`
+	Scores                  map[string]float64 `json:"scores"`
+	RankedMethods           []MethodCandidate  `json:"ranked_methods,omitempty"`
+	SelectedMethods         []MethodCandidate  `json:"selected_methods,omitempty"`
+	Explanation             string             `json:"explanation,omitempty"`
+	PlanningParams          PlanningParams     `json:"planning_params"`
+	PlanningParamsSource    string             `json:"planning_params_source,omitempty"`
+	Summary                 string             `json:"summary"`
+	PlanDraft               []PlanStep         `json:"plan_draft"`
+	ScheduleHint            string             `json:"schedule_hint"`
+	Semantic                SemanticStructure  `json:"semantic_structure,omitempty"`
 }
 
 type MethodCandidate struct {
-	Code        string  `json:"code"`
-	Name        string  `json:"name"`
-	Description string  `json:"description,omitempty"`
-	Group       string  `json:"group,omitempty"`
-	Role        string  `json:"role,omitempty"`
-	Score       float64 `json:"score,omitempty"`
-	Confidence  float64 `json:"confidence,omitempty"`
+	Code         string  `json:"code"`
+	Name         string  `json:"name"`
+	Description  string  `json:"description,omitempty"`
+	Group        string  `json:"group,omitempty"`
+	Role         string  `json:"role,omitempty"`
+	PlanStage    string  `json:"plan_stage,omitempty"`
+	PlanFunction string  `json:"plan_function,omitempty"`
+	Score        float64 `json:"score,omitempty"`
+	Confidence   float64 `json:"confidence,omitempty"`
 }
 
 type SemanticStructure struct {
@@ -81,4 +90,10 @@ type PlanStep struct {
 	Description      string `json:"description"`
 	EstimatedMinutes int    `json:"estimated_minutes"`
 	Status           string `json:"status,omitempty"`
+	PlanStage        string `json:"plan_stage,omitempty"`
+	PlanFunction     string `json:"plan_function,omitempty"`
+	MethodCode       string `json:"method_code,omitempty"`
+	MethodName       string `json:"method_name,omitempty"`
+	MethodGroup      string `json:"method_group,omitempty"`
+	MethodRole       string `json:"method_role,omitempty"`
 }

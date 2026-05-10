@@ -37,8 +37,11 @@ def choose_method(task, sequence_state, methods):
         "scores": scores,
         "ranked_methods": ranked_methods,
         "selected_methods": selection["selected_methods"],
+        "selection_mode": "multi_method",
+        "combination_confidence": selection["combination_confidence"],
         "explanation": selection["explanation"],
         "planning_params": _planning_params(planning_vector),
+        "planning_params_source": "GRU/dense planning head; параметры применяются ко всей комбинации выбранных методов",
         "features": task_features["values"],
     }
 
