@@ -2,6 +2,7 @@ import re
 
 from app.generation.prompts import build_generation_prompt
 from app.generation.service import get_text_generator
+from app.planning.method_alignment import align_steps_to_methods
 
 
 BAD_TEXT_FRAGMENTS = (
@@ -212,6 +213,7 @@ def _generate_steps(task, prediction, template, steps_template, planning_params,
             step["title"] = _fallback_step_title(task, steps_template[index], index + 1)
             step["description"] = _fallback_step_description(task, steps_template[index], step["title"], index + 1)
     steps = _ensure_semantic_subgoal_coverage(steps, task)
+    steps = align_steps_to_methods(steps, task, planning_params)
 
     return steps
 
