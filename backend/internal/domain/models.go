@@ -49,15 +49,17 @@ type MLRecommendation struct {
 }
 
 type MethodCandidate struct {
-	Code         string  `json:"code"`
-	Name         string  `json:"name"`
-	Description  string  `json:"description,omitempty"`
-	Group        string  `json:"group,omitempty"`
-	Role         string  `json:"role,omitempty"`
-	PlanStage    string  `json:"plan_stage,omitempty"`
-	PlanFunction string  `json:"plan_function,omitempty"`
-	Score        float64 `json:"score,omitempty"`
-	Confidence   float64 `json:"confidence,omitempty"`
+	Code               string  `json:"code"`
+	Name               string  `json:"name"`
+	Description        string  `json:"description,omitempty"`
+	Group              string  `json:"group,omitempty"`
+	Role               string  `json:"role,omitempty"`
+	PlanStage          string  `json:"plan_stage,omitempty"`
+	PlanFunction       string  `json:"plan_function,omitempty"`
+	Score              float64 `json:"score,omitempty"`
+	Confidence         float64 `json:"confidence,omitempty"`
+	CompatibilityScore float64 `json:"compatibility_score,omitempty"`
+	SelectionScore     float64 `json:"selection_score,omitempty"`
 }
 
 type SemanticStructure struct {

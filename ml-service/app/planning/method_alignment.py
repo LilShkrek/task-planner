@@ -109,34 +109,34 @@ def _rewrite_step(step, task, family, planning_params):
 def _aligned_text(family, subject, method_name, planning_params):
     if family == "goal":
         return (
-            f"Уточнить критерии для {subject}",
-            f"По методу {method_name} зафиксируй измеримый результат для «{subject}» и критерии готовности.",
+            f"Уточнить результат: {subject}",
+            f"Используй {method_name}: опиши ожидаемый результат по «{subject}», критерии готовности и признак, по которому будет понятно, что шаг выполнен.",
         )
     if family == "priority":
         return (
-            f"Выделить главное в {subject}",
-            f"По методу {method_name} расставь приоритеты для «{subject}»: отдели важное, срочное и обязательное.",
+            f"Расставить приоритеты: {subject}",
+            f"Используй {method_name}: отдели для «{subject}» важное и срочное от второстепенного, чтобы начать с обязательных действий.",
         )
     if family == "decomposition":
         return (
-            f"Разбить на этапы {subject}",
-            f"По методу {method_name} разложи «{subject}» на части, зависимости и понятную последовательность действий.",
+            f"Разложить на этапы: {subject}",
+            f"Используй {method_name}: разбей «{subject}» на части, зависимости и понятную последовательность действий.",
         )
     if family == "time":
         focus = planning_params.get("focus_minutes", 25)
         breaks = planning_params.get("break_minutes", 5)
         return (
-            f"Запланировать время для {subject}",
-            f"По методу {method_name} выполни «{subject}» рабочими сессиями по {focus} минут с перерывами по {breaks} минут.",
+            f"Запланировать работу: {subject}",
+            f"Используй {method_name}: выдели на «{subject}» рабочие сессии по {focus} минут и перерывы по {breaks} минут.",
         )
     if family == "start":
         return (
             f"Начать с малого шага",
-            f"По методу {method_name} снизь сопротивление: начни «{subject}» с первого маленького действия на 5 минут.",
+            f"Используй {method_name}: снизь сопротивление и начни «{subject}» с первого маленького действия на 5 минут.",
         )
     return (
-        f"Проверить результат {subject}",
-        f"По методу {method_name} сверь «{subject}» с целью, оцени качество результата и зафиксируй, что нужно исправить.",
+        f"Проверить результат: {subject}",
+        f"Используй {method_name}: сверь «{subject}» с целью, оцени качество результата и зафиксируй, что нужно исправить.",
     )
 
 
@@ -157,13 +157,30 @@ def _step_subject(step, task):
         if title.startswith(prefix):
             value = _clean(title[len(prefix):])
             if value:
-                return _enrich_subject(value.lower(), task)
+                return _enrich_subject(_normalize_subject(value.lower()), task)
     semantic = task.get("_semantic_structure") or {}
     subgoals = semantic.get("subgoals") if isinstance(semantic, dict) else []
     position = int(step.get("position") or 1)
     if isinstance(subgoals, list) and subgoals:
-        return _enrich_subject(_clean(subgoals[min(position, len(subgoals)) - 1]).lower(), task)
-    return _enrich_subject(_clean(task.get("title") or "задачи").lower(), task)
+        return _enrich_subject(_normalize_subject(_clean(subgoals[min(position, len(subgoals)) - 1]).lower()), task)
+    return _enrich_subject(_normalize_subject(_clean(task.get("title") or "задачи").lower()), task)
+
+
+def _normalize_subject(subject):
+    normalized = _normalized(subject)
+    if normalized in {"даты", "дата", "сроки", "срок"} or "выбрать даты" in normalized:
+        return "выбор дат поездки"
+    if normalized in {"бюджет"} or "определить бюджет" in normalized or "рассчитать бюджет" in normalized:
+        return "расчет бюджета"
+    if normalized in {"жилье", "жильё", "проживание"} or any(marker in normalized for marker in ("подобрать место проживания", "забронировать жиль")):
+        return "выбор жилья"
+    if normalized in {"маршрут"} or "продумать маршрут" in normalized or "составить маршрут" in normalized:
+        return "составление маршрута"
+    if "вещ" in normalized and "документ" in normalized:
+        return "подготовка вещей и проверка документов"
+    if normalized in {"вещи и документы", "документы"}:
+        return "подготовка вещей и проверка документов"
+    return subject
 
 
 def _enrich_subject(subject, task):

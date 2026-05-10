@@ -52,6 +52,37 @@ class MultiMethodSelectionTest(unittest.TestCase):
         self.assertEqual(len(roles), len(set(roles)))
         self.assertEqual(len(stages), len(set(stages)))
 
+    def test_large_travel_task_prefers_time_method_over_start_method(self):
+        ranked = _ranked_methods() + [
+            {
+                "code": "five_minute_rule",
+                "name": "Five-Minute Rule",
+                "group": "старт / борьба с прокрастинацией",
+                "role": "снижает порог старта",
+                "score": 8.6,
+                "confidence": 0.3,
+            }
+        ]
+
+        result = select_methods(
+            ranked,
+            {
+                "title": "Спланировать отпуск",
+                "description": "Выбрать даты, бюджет, жилье, маршрут и документы",
+                "estimated_minutes": 180,
+                "priority": 3,
+                "_semantic_structure": {
+                    "domain": "travel",
+                    "subgoals": ["выбрать даты поездки", "определить бюджет", "подобрать жилье", "составить маршрут"],
+                },
+            },
+        )
+
+        execution = [method for method in result["selected_methods"] if method["plan_stage"] == "execution_time"][0]
+        self.assertEqual(execution["code"], "time_blocking")
+        self.assertGreater(execution["compatibility_score"], 0.8)
+        self.assertNotIn("five_minute_rule", [method["code"] for method in result["selected_methods"]])
+
 
 def _ranked_methods():
     return [

@@ -13,14 +13,16 @@ def analyze_task(task):
     )
     catalog = load_catalog()
     sequence_state = encode_text_sequence(text)
-    prediction = choose_method(task, sequence_state, catalog["methods"])
+    semantic_structure = extract_semantics(task)
+    task_for_selection = dict(task)
+    task_for_selection["_semantic_structure"] = semantic_structure
+    prediction = choose_method(task_for_selection, sequence_state, catalog["methods"])
     selected_methods = prediction.get("selected_methods") or []
     template = build_combined_template(selected_methods, catalog["templates"])
     if not template.get("steps"):
         template = catalog["templates"].get(prediction["method_code"])
     if not template:
         raise RuntimeError(f"в БД нет шаблона плана для метода {prediction['method_code']}")
-    semantic_structure = extract_semantics(task)
     generated = generate_response(task, prediction, template, semantic_structure=semantic_structure)
 
     return {

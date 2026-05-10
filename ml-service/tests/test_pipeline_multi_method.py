@@ -106,7 +106,7 @@ class PipelineMultiMethodTest(unittest.TestCase):
         )
 
         text = " ".join(f"{step['title']} {step['description']}" for step in result["plan_draft"]).lower()
-        self.assertIn("даты", text)
+        self.assertIn("дат", text)
         self.assertIn("бюджет", text)
         self.assertIn("жиль", text)
         self.assertIn("маршрут", text)

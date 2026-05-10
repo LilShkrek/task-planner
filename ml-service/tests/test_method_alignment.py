@@ -84,10 +84,50 @@ class MethodAlignmentTest(unittest.TestCase):
         self.assertIn("оцен", text)
         self.assertIn("результат", text)
 
+    def test_travel_subgoals_are_normalized_in_step_text(self):
+        steps = [
+            _step(
+                "time_blocking",
+                "Time Blocking",
+                "Даты",
+                "Назначить время для этапа.",
+                "распределение времени",
+                "распределяет работу по календарю",
+                "execution_time",
+            ),
+            _step(
+                "checklist",
+                "Checklist Method",
+                "Вещи и документы",
+                "Проверить этап.",
+                "контроль / завершение",
+                "проверяет обязательные пункты",
+                "review_control",
+                position=2,
+            ),
+        ]
 
-def _step(code, name, title, description, group, role, stage):
+        aligned = align_steps_to_methods(
+            steps,
+            {
+                "title": "Спланировать отпуск",
+                "_semantic_structure": {
+                    "domain": "travel",
+                    "subgoals": ["даты", "вещи и документы"],
+                },
+            },
+            {"focus_minutes": 40, "break_minutes": 10},
+        )
+        text = " ".join(_step_text(step) for step in aligned)
+
+        self.assertIn("выбор дат поездки", text)
+        self.assertIn("подготовка вещей и проверка документов", text)
+        self.assertNotIn("для даты", text)
+
+
+def _step(code, name, title, description, group, role, stage, position=1):
     return {
-        "position": 1,
+        "position": position,
         "title": title,
         "description": description,
         "method_code": code,
