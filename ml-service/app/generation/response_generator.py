@@ -597,7 +597,7 @@ def _fallback_summary(task, prediction=None):
     if semantic.get("goal") and semantic.get("subgoals"):
         items = _summary_items(semantic.get("subgoals") or [])
         if items:
-            return _normalize_sentence(f"План по задаче «{semantic['goal']}» охватывает {items}")
+            return _normalize_sentence(f"План охватывает {items}")
     selected = prediction.get("selected_methods", []) if isinstance(prediction, dict) else []
     if selected:
         functions = _summary_items([method.get("plan_function", "") for method in selected])
@@ -642,7 +642,13 @@ def _summary_items(items):
         return ""
     if len(normalized) == 1:
         return normalized[0]
-    return ", ".join(normalized[:-1]) + " и " + normalized[-1]
+    return _join_summary_items(normalized)
+
+
+def _join_summary_items(items):
+    if len(items) == 2:
+        return f"{items[0]} и {items[1]}"
+    return ", ".join(items[:-1]) + " и " + items[-1]
 
 
 def _summary_phrase(value):
@@ -656,9 +662,9 @@ def _summary_phrase(value):
     if "жиль" in text or "прожив" in text or "отел" in text:
         return "выбор жилья"
     if "маршрут" in text:
-        return "маршрут"
+        return "составление маршрута"
     if "вещ" in text or "документ" in text:
-        return "вещи и документы"
+        return "подготовку вещей и документов"
     if "цель" in text or "результ" in text:
         return "уточнение результата"
     if "приорит" in text or "важн" in text or "сроч" in text:

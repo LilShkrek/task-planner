@@ -21,7 +21,7 @@ func (b *Builder) Build(task domain.Task, recommendation domain.MLRecommendation
 
 	return domain.Plan{
 		TaskID:       task.ID,
-		MethodCode:   recommendation.MethodCode,
+		MethodCode:   legacyMethodCode(recommendation),
 		Summary:      summary(task, recommendation),
 		ScheduleHint: recommendation.ScheduleHint,
 		Steps:        normalizeSteps(steps, task.EstimatedMinutes),
@@ -32,7 +32,17 @@ func summary(task domain.Task, recommendation domain.MLRecommendation) string {
 	if strings.TrimSpace(recommendation.Summary) != "" {
 		return recommendation.Summary
 	}
-	return fmt.Sprintf("План для задачи %q по методу %s. Причина выбора: %s", task.Title, recommendation.MethodName, recommendation.Reason)
+	return fmt.Sprintf("План для задачи %q по комбинации методов. %s", task.Title, recommendation.Explanation)
+}
+
+func legacyMethodCode(recommendation domain.MLRecommendation) string {
+	if recommendation.LegacyCompatibility.MethodCode != "" {
+		return recommendation.LegacyCompatibility.MethodCode
+	}
+	if len(recommendation.SelectedMethods) > 0 {
+		return recommendation.SelectedMethods[0].Code
+	}
+	return ""
 }
 
 func normalizeSteps(steps []domain.PlanStep, totalMinutes int) []domain.PlanStep {

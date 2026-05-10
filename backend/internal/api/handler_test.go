@@ -122,11 +122,14 @@ func TestCreateTaskPlanSavesTaskAndPlan(t *testing.T) {
 	if recommendation.UserFacingPrimaryStrategy == "" {
 		t.Fatalf("ответ должен содержать user_facing_primary_strategy")
 	}
-	if recommendation.LegacyCompatibility.MethodCode != recommendation.MethodCode {
+	if recommendation.LegacyCompatibility.MethodCode != "pomodoro" {
 		t.Fatalf("legacy_compatibility должен сохранять старый method_code")
 	}
-	if recommendation.PrimaryMethodCode != recommendation.MethodCode {
-		t.Fatalf("primary_method_code должен совпадать с legacy method_code")
+	if recommendation.LegacyCompatibility.PrimaryMethodCode != recommendation.LegacyCompatibility.MethodCode {
+		t.Fatalf("primary_method_code должен совпадать с legacy method_code внутри compatibility блока")
+	}
+	if recommendation.LegacyCompatibility.ReasonLegacy == "" {
+		t.Fatalf("legacy reason должен находиться внутри compatibility блока")
 	}
 	if recommendation.CombinationConfidence <= 0 {
 		t.Fatalf("combination_confidence должен быть положительным")
@@ -191,13 +194,6 @@ func TestCreateTaskPlanHandlesMLTimeout(t *testing.T) {
 
 func testRecommendation() domain.MLRecommendation {
 	return domain.MLRecommendation{
-		MethodCode:                "pomodoro",
-		MethodName:                "Pomodoro",
-		Confidence:                0.91,
-		PrimaryMethodCode:         "pomodoro",
-		PrimaryMethodName:         "Pomodoro",
-		PrimaryMethodConfidence:   0.91,
-		LegacyMethodNote:          "method_code/method_name оставлены для совместимости",
 		SelectionMode:             "multi_method",
 		UserFacingPrimaryStrategy: "Комбинированный план из 3 методов",
 		CombinationConfidence:     0.42,
@@ -208,9 +204,9 @@ func testRecommendation() domain.MLRecommendation {
 			PrimaryMethodCode:       "pomodoro",
 			PrimaryMethodName:       "Pomodoro",
 			PrimaryMethodConfidence: 0.91,
+			ReasonLegacy:            "тестовая legacy-причина основного метода",
 			Note:                    "legacy поля сохранены для совместимости",
 		},
-		Reason: "тестовая рекомендация",
 		Scores: map[string]float64{
 			"pomodoro": 1.5,
 		},

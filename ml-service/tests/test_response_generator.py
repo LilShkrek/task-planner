@@ -223,8 +223,10 @@ class ResponseGeneratorTest(unittest.TestCase):
         self.assertIn("выбор дат", summary)
         self.assertIn("расчет бюджета", summary)
         self.assertIn("выбор жилья", summary)
-        self.assertIn("маршрут", summary)
-        self.assertIn("вещи и документы", summary)
+        self.assertIn("составление маршрута", summary)
+        self.assertIn("подготовку вещей и документов", summary)
+        self.assertNotIn("маршрут и вещи и документы", summary)
+        self.assertTrue(summary.startswith("план охватывает"))
 
     def test_schedule_hint_is_multi_method_aware(self):
         result = generate_response(

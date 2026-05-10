@@ -40,14 +40,6 @@ type MLRecommendation struct {
 	RankedMethods             []MethodCandidate   `json:"ranked_methods,omitempty"`
 	Scores                    map[string]float64  `json:"scores"`
 	LegacyCompatibility       LegacyCompatibility `json:"legacy_compatibility,omitempty"`
-	MethodCode                string              `json:"method_code"`
-	MethodName                string              `json:"method_name"`
-	Confidence                float64             `json:"confidence"`
-	PrimaryMethodCode         string              `json:"primary_method_code,omitempty"`
-	PrimaryMethodName         string              `json:"primary_method_name,omitempty"`
-	PrimaryMethodConfidence   float64             `json:"primary_method_confidence,omitempty"`
-	LegacyMethodNote          string              `json:"legacy_method_note,omitempty"`
-	Reason                    string              `json:"reason"`
 }
 
 type LegacyCompatibility struct {
@@ -57,6 +49,7 @@ type LegacyCompatibility struct {
 	PrimaryMethodCode       string  `json:"primary_method_code,omitempty"`
 	PrimaryMethodName       string  `json:"primary_method_name,omitempty"`
 	PrimaryMethodConfidence float64 `json:"primary_method_confidence,omitempty"`
+	ReasonLegacy            string  `json:"reason_legacy,omitempty"`
 	Note                    string  `json:"note,omitempty"`
 }
 

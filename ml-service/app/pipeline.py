@@ -31,6 +31,7 @@ def analyze_task(task):
         "primary_method_code": prediction["method_code"],
         "primary_method_name": prediction["method_name"],
         "primary_method_confidence": prediction["confidence"],
+        "reason_legacy": prediction["reason"],
         "note": "legacy поля сохранены для совместимости; пользовательская логика строится по selected_methods",
     }
 
@@ -49,12 +50,4 @@ def analyze_task(task):
         "ranked_methods": prediction["ranked_methods"],
         "scores": prediction["scores"],
         "legacy_compatibility": compatibility,
-        "method_code": prediction["method_code"],
-        "method_name": prediction["method_name"],
-        "confidence": prediction["confidence"],
-        "primary_method_code": prediction["method_code"],
-        "primary_method_name": prediction["method_name"],
-        "primary_method_confidence": prediction["confidence"],
-        "legacy_method_note": compatibility["note"],
-        "reason": prediction["reason"],
     }

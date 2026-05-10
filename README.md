@@ -91,9 +91,9 @@ export ML_DATABASE_URL="postgres://task_planner:task_planner@localhost:5432/task
 - `ranked_methods` - полный рейтинг методов по scores модели;
 - `combination_confidence` - агрегированная уверенность комбинации;
 - `explanation` - объяснение роли каждого метода;
-- `legacy_compatibility` - технический блок совместимости со старым single-method API.
+- `legacy_compatibility` - единственный технический блок совместимости со старым single-method API.
 
-Legacy-поля `method_code`, `method_name`, `confidence` остаются доступными в конце recommendation для старого backend-контракта, но пользовательский смысл ответа находится в `selected_methods`, `summary`, `schedule_hint` и `plan_draft`.
+Legacy-данные `method_code`, `method_name`, `confidence` и `reason_legacy` больше не дублируются на верхнем уровне recommendation. Пользовательский смысл ответа находится в `selected_methods`, `summary`, `schedule_hint` и `plan_draft`.
 
 Комбинированный план строится этапами: один метод отвечает за постановку цели, другой за приоритизацию, третий за декомпозицию, четвертый за распределение времени или выполнение, пятый за контроль результата. Каждый шаг плана получает служебные поля `plan_stage`, `plan_function`, `method_code`, `method_name`, `method_role`, чтобы было видно, какой метод повлиял на этап.
 
