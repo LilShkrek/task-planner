@@ -24,26 +24,37 @@ def analyze_task(task):
     if not template:
         raise RuntimeError(f"в БД нет шаблона плана для метода {prediction['method_code']}")
     generated = generate_response(task, prediction, template, semantic_structure=semantic_structure)
-
-    return {
+    compatibility = {
         "method_code": prediction["method_code"],
         "method_name": prediction["method_name"],
         "confidence": prediction["confidence"],
         "primary_method_code": prediction["method_code"],
         "primary_method_name": prediction["method_name"],
         "primary_method_confidence": prediction["confidence"],
-        "legacy_method_note": "method_code/method_name оставлены для совместимости; итоговый план строится по selected_methods",
+        "note": "legacy поля сохранены для совместимости; пользовательская логика строится по selected_methods",
+    }
+
+    return {
         "selection_mode": prediction["selection_mode"],
-        "combination_confidence": prediction["combination_confidence"],
-        "reason": prediction["reason"],
-        "scores": prediction["scores"],
-        "ranked_methods": prediction["ranked_methods"],
+        "user_facing_primary_strategy": f"Комбинированный план из {len(selected_methods)} методов",
         "selected_methods": selected_methods,
+        "combination_confidence": prediction["combination_confidence"],
         "explanation": prediction["explanation"],
+        "semantic_structure": semantic_structure,
         "planning_params": prediction["planning_params"],
         "planning_params_source": prediction["planning_params_source"],
         "summary": generated["summary"],
-        "plan_draft": generated["plan_draft"],
         "schedule_hint": generated["schedule_hint"],
-        "semantic_structure": semantic_structure,
+        "plan_draft": generated["plan_draft"],
+        "ranked_methods": prediction["ranked_methods"],
+        "scores": prediction["scores"],
+        "legacy_compatibility": compatibility,
+        "method_code": prediction["method_code"],
+        "method_name": prediction["method_name"],
+        "confidence": prediction["confidence"],
+        "primary_method_code": prediction["method_code"],
+        "primary_method_name": prediction["method_name"],
+        "primary_method_confidence": prediction["confidence"],
+        "legacy_method_note": compatibility["note"],
+        "reason": prediction["reason"],
     }

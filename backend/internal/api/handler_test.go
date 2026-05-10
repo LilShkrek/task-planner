@@ -119,6 +119,12 @@ func TestCreateTaskPlanSavesTaskAndPlan(t *testing.T) {
 	if recommendation.SelectionMode != "multi_method" {
 		t.Fatalf("ожидался multi_method режим, получено %q", recommendation.SelectionMode)
 	}
+	if recommendation.UserFacingPrimaryStrategy == "" {
+		t.Fatalf("ответ должен содержать user_facing_primary_strategy")
+	}
+	if recommendation.LegacyCompatibility.MethodCode != recommendation.MethodCode {
+		t.Fatalf("legacy_compatibility должен сохранять старый method_code")
+	}
 	if recommendation.PrimaryMethodCode != recommendation.MethodCode {
 		t.Fatalf("primary_method_code должен совпадать с legacy method_code")
 	}
@@ -185,16 +191,26 @@ func TestCreateTaskPlanHandlesMLTimeout(t *testing.T) {
 
 func testRecommendation() domain.MLRecommendation {
 	return domain.MLRecommendation{
-		MethodCode:              "pomodoro",
-		MethodName:              "Pomodoro",
-		Confidence:              0.91,
-		PrimaryMethodCode:       "pomodoro",
-		PrimaryMethodName:       "Pomodoro",
-		PrimaryMethodConfidence: 0.91,
-		LegacyMethodNote:        "method_code/method_name оставлены для совместимости",
-		SelectionMode:           "multi_method",
-		CombinationConfidence:   0.42,
-		Reason:                  "тестовая рекомендация",
+		MethodCode:                "pomodoro",
+		MethodName:                "Pomodoro",
+		Confidence:                0.91,
+		PrimaryMethodCode:         "pomodoro",
+		PrimaryMethodName:         "Pomodoro",
+		PrimaryMethodConfidence:   0.91,
+		LegacyMethodNote:          "method_code/method_name оставлены для совместимости",
+		SelectionMode:             "multi_method",
+		UserFacingPrimaryStrategy: "Комбинированный план из 3 методов",
+		CombinationConfidence:     0.42,
+		LegacyCompatibility: domain.LegacyCompatibility{
+			MethodCode:              "pomodoro",
+			MethodName:              "Pomodoro",
+			Confidence:              0.91,
+			PrimaryMethodCode:       "pomodoro",
+			PrimaryMethodName:       "Pomodoro",
+			PrimaryMethodConfidence: 0.91,
+			Note:                    "legacy поля сохранены для совместимости",
+		},
+		Reason: "тестовая рекомендация",
 		Scores: map[string]float64{
 			"pomodoro": 1.5,
 		},

@@ -50,8 +50,14 @@ class PipelineMultiMethodTest(unittest.TestCase):
 
         self.assertEqual(len(result["selected_methods"]), 5)
         self.assertEqual(len(result["plan_draft"]), 5)
+        self.assertEqual(
+            list(result.keys())[:4],
+            ["selection_mode", "user_facing_primary_strategy", "selected_methods", "combination_confidence"],
+        )
         self.assertEqual(result["selection_mode"], "multi_method")
+        self.assertEqual(result["user_facing_primary_strategy"], "Комбинированный план из 5 методов")
         self.assertEqual(result["primary_method_code"], result["method_code"])
+        self.assertEqual(result["legacy_compatibility"]["method_code"], result["method_code"])
         self.assertIn("совместимости", result["legacy_method_note"])
         self.assertGreater(result["combination_confidence"], 0)
         self.assertIn("ranked_methods", result)
@@ -111,6 +117,14 @@ class PipelineMultiMethodTest(unittest.TestCase):
         self.assertIn("жиль", text)
         self.assertIn("маршрут", text)
         self.assertIn("документ", text)
+        summary = result["summary"].lower()
+        self.assertIn("выбор дат", summary)
+        self.assertIn("расчет бюджета", summary)
+        self.assertIn("выбор жилья", summary)
+        self.assertIn("маршрут", summary)
+        self.assertIn("вещи и документы", summary)
+        self.assertIn("этап", result["schedule_hint"].lower())
+        self.assertIn("финальную проверку", result["schedule_hint"].lower())
         self.assert_plan_matches_selected_methods(result)
 
     def test_short_urgent_task_selects_compact_combination(self):
@@ -134,6 +148,7 @@ class PipelineMultiMethodTest(unittest.TestCase):
         self.assertEqual(len(result["plan_draft"]), 3)
         self.assertIn("Комбинация выбрана", result["explanation"])
         self.assertEqual(result["selection_mode"], "multi_method")
+        self.assertEqual(result["user_facing_primary_strategy"], "Комбинированный план из 3 методов")
         self.assert_plan_matches_selected_methods(result)
         self.assertEqual(
             {method["plan_stage"] for method in result["selected_methods"]},

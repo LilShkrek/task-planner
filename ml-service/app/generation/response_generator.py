@@ -116,8 +116,8 @@ def generate_response(task, prediction, template, text_generator=None, semantic_
         template,
         "summary",
         64,
-        validator=lambda text: _valid_summary(text, task),
-        fallback=lambda: _fallback_summary(task),
+        validator=lambda text: _valid_summary(text, task, prediction),
+        fallback=lambda: _fallback_summary(task, prediction),
         sentence=True,
     )
     schedule_hint = _generate_checked_field(
@@ -127,7 +127,7 @@ def generate_response(task, prediction, template, text_generator=None, semantic_
         template,
         "schedule_hint",
         64,
-        validator=lambda text: _valid_schedule_hint(text),
+        validator=lambda text: _valid_schedule_hint(text, prediction),
         fallback=lambda: _fallback_schedule_hint(task, prediction),
         sentence=True,
     )
@@ -272,17 +272,42 @@ def _step_metadata(step_template):
     return result
 
 
-def _valid_summary(text, task):
+def _valid_summary(text, task, prediction=None):
     return (
         _meaningful(text, min_words=5)
         and _normalized(text) != _normalized(task.get("title") or "")
         and not _too_similar(text, task.get("title") or "", threshold=0.72)
         and not _bad_fragment(text)
+        and _summary_covers_plan_scope(text, task, prediction or {})
     )
 
 
-def _valid_schedule_hint(text):
-    return _meaningful(text, min_words=7) and not _bad_fragment(text) and not _bad_block_agreement(text)
+def _valid_schedule_hint(text, prediction=None):
+    if not (_meaningful(text, min_words=7) and not _bad_fragment(text) and not _bad_block_agreement(text)):
+        return False
+    if prediction and prediction.get("selection_mode") == "multi_method":
+        normalized = _normalized(text)
+        return "этап" in normalized and ("провер" in normalized or "резерв" in normalized)
+    return True
+
+
+def _summary_covers_plan_scope(text, task, prediction):
+    subgoals = _semantic_subgoals(task)
+    if len(subgoals) < 3 and not prediction.get("selected_methods"):
+        return True
+    normalized = _normalized(text)
+    markers = [_summary_marker(item) for item in subgoals[:5]]
+    markers = [marker for marker in markers if marker]
+    if markers:
+        covered = sum(1 for marker in markers if marker in normalized)
+        return covered >= min(2, len(markers))
+    functions = [str(method.get("plan_function") or "") for method in prediction.get("selected_methods", [])]
+    function_markers = [_summary_marker(function) for function in functions]
+    function_markers = [marker for marker in function_markers if marker]
+    if function_markers:
+        covered = sum(1 for marker in function_markers if marker in normalized)
+        return covered >= min(2, len(function_markers))
+    return True
 
 
 def _valid_step_title(text, task, previous_titles):
@@ -566,11 +591,18 @@ def _step_role(text):
     return ""
 
 
-def _fallback_summary(task):
+def _fallback_summary(task, prediction=None):
     title = _task_title(task)
     semantic = _semantic_structure(task)
     if semantic.get("goal") and semantic.get("subgoals"):
-        return _normalize_sentence(f"План поможет выполнить «{semantic['goal']}» через конкретные этапы: {semantic['subgoals'][0]}")
+        items = _summary_items(semantic.get("subgoals") or [])
+        if items:
+            return _normalize_sentence(f"План по задаче «{semantic['goal']}» охватывает {items}")
+    selected = prediction.get("selected_methods", []) if isinstance(prediction, dict) else []
+    if selected:
+        functions = _summary_items([method.get("plan_function", "") for method in selected])
+        if functions:
+            return _normalize_sentence(f"План для «{title}» объединяет этапы: {functions}")
     action = _short_task_action(task)
     if action:
         return _normalize_sentence(f"План поможет {action} и оставить время на проверку результата")
@@ -584,10 +616,66 @@ def _fallback_schedule_hint(task, prediction):
     break_minutes = params.get("break_minutes", 5)
     blocks = params.get("block_count", 1)
     review = params.get("review_minutes", 15)
+    if prediction.get("selection_mode") == "multi_method" or prediction.get("selected_methods"):
+        count = len(prediction.get("selected_methods") or [])
+        method_part = f"{count} выбранных методов" if count else "выбранной комбинации методов"
+        return (
+            f"Пройди план «{title}» по этапам {method_part}: работай {blocks} {_block_word(blocks)} "
+            f"по {focus} {_minute_word(focus)}, делай паузы по {break_minutes} {_minute_word(break_minutes)} "
+            f"и оставь {review} {_minute_word(review)} на финальную проверку."
+        )
     return (
         f"Запланируй задачу «{title}» на {blocks} {_block_word(blocks)} по {focus} {_minute_word(focus)}, "
         f"делай перерывы по {break_minutes} {_minute_word(break_minutes)} и оставь {review} {_minute_word(review)} на проверку."
     )
+
+
+def _summary_items(items):
+    normalized = []
+    for item in items:
+        value = _summary_phrase(item)
+        if value and value not in normalized:
+            normalized.append(value)
+        if len(normalized) >= 5:
+            break
+    if not normalized:
+        return ""
+    if len(normalized) == 1:
+        return normalized[0]
+    return ", ".join(normalized[:-1]) + " и " + normalized[-1]
+
+
+def _summary_phrase(value):
+    text = _normalized(value)
+    if not text:
+        return ""
+    if "дат" in text or "срок" in text:
+        return "выбор дат"
+    if "бюджет" in text or "стоим" in text or "расход" in text:
+        return "расчет бюджета"
+    if "жиль" in text or "прожив" in text or "отел" in text:
+        return "выбор жилья"
+    if "маршрут" in text:
+        return "маршрут"
+    if "вещ" in text or "документ" in text:
+        return "вещи и документы"
+    if "цель" in text or "результ" in text:
+        return "уточнение результата"
+    if "приорит" in text or "важн" in text or "сроч" in text:
+        return "приоритизацию"
+    if "декомп" in text or "разб" in text or "структур" in text:
+        return "структуру работы"
+    if "время" in text or "выполн" in text:
+        return "выполнение по времени"
+    if "контрол" in text or "провер" in text or "заверш" in text:
+        return "финальную проверку"
+    return " ".join(str(value).split())[:80].strip()
+
+
+def _summary_marker(value):
+    phrase = _summary_phrase(value)
+    words = _content_words(phrase)
+    return sorted(words)[0] if words else ""
 
 
 def _fallback_step_title(task, step_template, position):

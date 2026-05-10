@@ -77,8 +77,10 @@ Response-модель теперь честно отражает multi-method р
 - `ranked_methods` - диагностический рейтинг всех методов;
 - `combination_confidence` - агрегат confidence выбранных методов, semantic compatibility и бонуса за покрытие разных этапов;
 - `explanation` - объяснение роли каждого метода в комбинации;
-- `primary_method_code`, `primary_method_name`, `primary_method_confidence` - основной метод для совместимости;
-- `method_code`, `method_name`, `confidence` временно сохранены как legacy-поля для backend и таблицы `plans`.
+- `legacy_compatibility` - технический блок совместимости со старым single-method API;
+- `method_code`, `method_name`, `confidence` временно сохранены как legacy-поля в конце ответа для backend и таблицы `plans`.
+
+User-facing часть ответа начинается с multi-method полей. `summary` описывает несколько ключевых подцелей плана, а `schedule_hint` связывает этапы комбинации методов, рабочие блоки и финальную проверку.
 
 `planning_params` формируются planning head модели выбора методов и применяются ко всей комбинации. Поле `planning_params_source` явно объясняет, что это не параметры одного случайного метода.
 

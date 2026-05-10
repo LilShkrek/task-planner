@@ -188,6 +188,68 @@ class ResponseGeneratorTest(unittest.TestCase):
                 text_generator=FakeTextGenerator(),
             )
 
+    def test_summary_covers_multiple_travel_subgoals(self):
+        semantic = {
+            "goal": "спланировать отпуск в Казани",
+            "subgoals": [
+                "выбрать даты поездки",
+                "определить бюджет",
+                "подобрать место проживания",
+                "продумать маршрут",
+                "собрать список вещей и документов",
+            ],
+            "constraints": [],
+            "domain": "travel",
+        }
+        result = generate_response(
+            task={
+                "title": "Спланировать отпуск в Казани",
+                "description": "Выбрать даты, бюджет, жилье, маршрут и документы",
+                "estimated_minutes": 180,
+            },
+            prediction={
+                "method_code": "time_blocking",
+                "method_name": "Time Blocking",
+                "selection_mode": "multi_method",
+                "selected_methods": [{"plan_function": "распределение времени и выполнение"}],
+                "planning_params": {"focus_minutes": 40, "break_minutes": 10, "block_count": 4, "review_minutes": 20},
+            },
+            template=_generic_time_blocking_template(),
+            text_generator=AlwaysBadTextGenerator(),
+            semantic_structure=semantic,
+        )
+
+        summary = result["summary"].lower()
+        self.assertIn("выбор дат", summary)
+        self.assertIn("расчет бюджета", summary)
+        self.assertIn("выбор жилья", summary)
+        self.assertIn("маршрут", summary)
+        self.assertIn("вещи и документы", summary)
+
+    def test_schedule_hint_is_multi_method_aware(self):
+        result = generate_response(
+            task={
+                "title": "Подготовить презентацию",
+                "description": "Собрать материалы, сделать слайды и проверить выступление",
+                "estimated_minutes": 120,
+            },
+            prediction={
+                "method_code": "time_blocking",
+                "method_name": "Time Blocking",
+                "selection_mode": "multi_method",
+                "selected_methods": [{"code": "smart"}, {"code": "wbs"}, {"code": "checklist"}],
+                "planning_params": {"focus_minutes": 35, "break_minutes": 5, "block_count": 3, "review_minutes": 15},
+            },
+            template=_generic_time_blocking_template(),
+            text_generator=AlwaysBadTextGenerator(),
+        )
+
+        hint = result["schedule_hint"].lower()
+        self.assertIn("этап", hint)
+        self.assertIn("3 рабочих блока", hint)
+        self.assertIn("35 минут", hint)
+        self.assertIn("финальную проверку", hint)
+
     def test_generate_response_makes_different_subject_outputs(self):
         generator = SubjectAwareFakeTextGenerator()
         presentation = generate_response(

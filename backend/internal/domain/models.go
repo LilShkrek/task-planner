@@ -26,26 +26,38 @@ type Task struct {
 }
 
 type MLRecommendation struct {
-	MethodCode              string             `json:"method_code"`
-	MethodName              string             `json:"method_name"`
-	Confidence              float64            `json:"confidence"`
-	PrimaryMethodCode       string             `json:"primary_method_code,omitempty"`
-	PrimaryMethodName       string             `json:"primary_method_name,omitempty"`
-	PrimaryMethodConfidence float64            `json:"primary_method_confidence,omitempty"`
-	LegacyMethodNote        string             `json:"legacy_method_note,omitempty"`
-	SelectionMode           string             `json:"selection_mode,omitempty"`
-	CombinationConfidence   float64            `json:"combination_confidence,omitempty"`
-	Reason                  string             `json:"reason"`
-	Scores                  map[string]float64 `json:"scores"`
-	RankedMethods           []MethodCandidate  `json:"ranked_methods,omitempty"`
-	SelectedMethods         []MethodCandidate  `json:"selected_methods,omitempty"`
-	Explanation             string             `json:"explanation,omitempty"`
-	PlanningParams          PlanningParams     `json:"planning_params"`
-	PlanningParamsSource    string             `json:"planning_params_source,omitempty"`
-	Summary                 string             `json:"summary"`
-	PlanDraft               []PlanStep         `json:"plan_draft"`
-	ScheduleHint            string             `json:"schedule_hint"`
-	Semantic                SemanticStructure  `json:"semantic_structure,omitempty"`
+	SelectionMode             string              `json:"selection_mode,omitempty"`
+	UserFacingPrimaryStrategy string              `json:"user_facing_primary_strategy,omitempty"`
+	SelectedMethods           []MethodCandidate   `json:"selected_methods,omitempty"`
+	CombinationConfidence     float64             `json:"combination_confidence,omitempty"`
+	Explanation               string              `json:"explanation,omitempty"`
+	Semantic                  SemanticStructure   `json:"semantic_structure,omitempty"`
+	PlanningParams            PlanningParams      `json:"planning_params"`
+	PlanningParamsSource      string              `json:"planning_params_source,omitempty"`
+	Summary                   string              `json:"summary"`
+	ScheduleHint              string              `json:"schedule_hint"`
+	PlanDraft                 []PlanStep          `json:"plan_draft"`
+	RankedMethods             []MethodCandidate   `json:"ranked_methods,omitempty"`
+	Scores                    map[string]float64  `json:"scores"`
+	LegacyCompatibility       LegacyCompatibility `json:"legacy_compatibility,omitempty"`
+	MethodCode                string              `json:"method_code"`
+	MethodName                string              `json:"method_name"`
+	Confidence                float64             `json:"confidence"`
+	PrimaryMethodCode         string              `json:"primary_method_code,omitempty"`
+	PrimaryMethodName         string              `json:"primary_method_name,omitempty"`
+	PrimaryMethodConfidence   float64             `json:"primary_method_confidence,omitempty"`
+	LegacyMethodNote          string              `json:"legacy_method_note,omitempty"`
+	Reason                    string              `json:"reason"`
+}
+
+type LegacyCompatibility struct {
+	MethodCode              string  `json:"method_code,omitempty"`
+	MethodName              string  `json:"method_name,omitempty"`
+	Confidence              float64 `json:"confidence,omitempty"`
+	PrimaryMethodCode       string  `json:"primary_method_code,omitempty"`
+	PrimaryMethodName       string  `json:"primary_method_name,omitempty"`
+	PrimaryMethodConfidence float64 `json:"primary_method_confidence,omitempty"`
+	Note                    string  `json:"note,omitempty"`
 }
 
 type MethodCandidate struct {
