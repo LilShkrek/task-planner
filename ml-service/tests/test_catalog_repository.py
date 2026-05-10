@@ -51,6 +51,8 @@ class CatalogRepositoryTest(unittest.TestCase):
                 "Pomodoro",
                 "Работа короткими сессиями.",
                 "Задачи на концентрацию.",
+                "распределение времени",
+                "задает ритм фокус-сессий",
                 '{"steps": [{"title": "Начать"}], "schedule_hint": "Работать фокус-сессиями."}',
             )
         ]
@@ -60,6 +62,8 @@ class CatalogRepositoryTest(unittest.TestCase):
 
         self.assertEqual(catalog["methods"][0]["code"], "pomodoro")
         self.assertEqual(catalog["methods"][0]["name"], "Pomodoro")
+        self.assertEqual(catalog["methods"][0]["group"], "распределение времени")
+        self.assertEqual(catalog["methods"][0]["role"], "задает ритм фокус-сессий")
         self.assertEqual(catalog["templates"]["pomodoro"]["steps"][0]["title"], "Начать")
         self.assertEqual(catalog["templates"]["pomodoro"]["schedule_hint"], "Работать фокус-сессиями.")
 

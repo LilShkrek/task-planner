@@ -24,6 +24,8 @@ def load_catalog():
                     m.name,
                     m.description,
                     m.best_for,
+                    m.method_group,
+                    m.role,
                     t.template
                 FROM time_management_methods m
                 JOIN LATERAL (
@@ -50,9 +52,11 @@ def load_catalog():
             "name": row[2],
             "description": row[3],
             "best_for": row[4],
+            "group": row[5],
+            "role": row[6],
         }
         methods.append(method)
-        templates[method["code"]] = _decode_template(row[5])
+        templates[method["code"]] = _decode_template(row[7])
 
     return {"methods": methods, "templates": templates}
 
