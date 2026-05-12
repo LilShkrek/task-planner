@@ -101,6 +101,10 @@ Legacy-данные `method_code`, `method_name`, `confidence` и `reason_legacy
 
 `summary` кратко охватывает несколько ключевых подцелей плана, а `schedule_hint` описывает выполнение по этапам выбранной комбинации методов, рабочие блоки и финальную проверку.
 
+Semantic extraction использует title-first decomposition: сначала строит базовый каркас подцелей из `title + context`, а `description` использует как источник уточнений. Внутри `semantic_structure` хранятся `base_subgoals_from_title`, `description_hints`, `merged_subgoals` и `decomposition_confidence`. Ограничения вроде дедлайна и оценки времени сохраняются в `constraints` и не превращаются в текстовые подцели.
+
+Такой слой уменьшает зависимость от подробного описания: если `description` пустой, система все равно строит базовую декомпозицию по названию задачи; если пользователь уже перечислил шаги в описании, они нормализуются, укрупняются и добавляются как hints, а не полностью заменяют исходный каркас.
+
 `planning_params` формируются тем же planning head модели `GRU + dense/perceptron`, но в multi-method режиме применяются ко всей комбинации методов. Это явно указано в поле `planning_params_source`.
 
 ### Обучение моделей
