@@ -90,7 +90,9 @@ def autonomous_decomposition(task):
     description = _clean(task.get("description") or "")
     context = _clean(task.get("context") or "")
     domain = _infer_domain(title, "", context)
-    base_subgoals = _title_first_subgoals(title, context, domain)
+    title_subgoals = _title_first_subgoals(title, context, domain)
+    task_archetypes = _detect_task_archetypes(title, context, domain)
+    base_subgoals = _archetype_base_subgoals(title, context, domain, title_subgoals, task_archetypes)
     description_hints = _description_hints(description)
     constraints = _constraints(task, context)
     merged_subgoals = _merge_subgoals(base_subgoals, description_hints)
@@ -102,6 +104,7 @@ def autonomous_decomposition(task):
         "merged_subgoals": merged_subgoals,
         "constraints": constraints,
         "domain": domain,
+        "task_archetypes": task_archetypes,
         "decomposition_confidence": _decomposition_confidence(base_subgoals, description_hints),
     }
 
@@ -217,6 +220,133 @@ def _title_first_subgoals(title, context, domain):
     return ["уточнить результат", "разбить задачу на этапы", "выполнить основной этап", "проверить итог"]
 
 
+def _detect_task_archetypes(title, context, domain):
+    text = _clean(f"{title} {context}").lower()
+    checks = (
+        ("event_planning", ("мероприят", "событи", "праздник", "день рожден", "сюрприз", "вечерин")),
+        ("social_coordination", ("друг", "участник", "гост", "команд", "согласоват", "договорит")),
+        ("career_planning", ("карьер", "профес", "направлен", "работ", "год")),
+        ("decision_making", ("разобрат", "выбрать", "решить", "сравнит", "вариант", "направлен")),
+        ("creative_project", ("придумат", "концепц", "youtube", "ютуб", "канал", "контент", "творчес")),
+        ("logistics", ("переезд", "перевез", "логист", "собрать вещи", "транспорт", "документ")),
+        ("personal_organization", ("дедлайн", "не завал", "успеть", "организоват", "расписан", "порядок")),
+        ("self_reflection", ("разобрат", "осмысл", "понять", "цели", "приоритет", "ближайший год")),
+    )
+    result = []
+    for code, markers in checks:
+        if any(marker in text for marker in markers):
+            result.append(code)
+    if domain == "study" and any(marker in text for marker in ("дедлайн", "учеб", "не завал")):
+        result.append("personal_organization")
+    return _dedupe(result)
+
+
+def _archetype_base_subgoals(title, context, domain, title_subgoals, archetypes):
+    if not archetypes:
+        return title_subgoals
+    if domain in {"travel", "presentation", "research", "email"}:
+        return title_subgoals
+
+    title_details = _extract_title_details(title, context)
+    archetype_subgoals = []
+    for archetype in archetypes:
+        archetype_subgoals.extend(_subgoals_for_archetype(archetype))
+
+    if not archetype_subgoals:
+        return title_subgoals
+    if _is_generic_decomposition(title_subgoals) or domain in {"general", "study"}:
+        return _merge_subgoals(title_details, archetype_subgoals)
+    return _merge_subgoals(title_subgoals, title_details + archetype_subgoals)
+
+
+def _subgoals_for_archetype(archetype):
+    templates = {
+        "event_planning": [
+            "определить формат события",
+            "рассчитать бюджет",
+            "выбрать место и время",
+            "согласовать участников и детали",
+            "подготовить подарок или сценарий",
+            "проверить готовность",
+        ],
+        "social_coordination": [
+            "уточнить ожидания участников",
+            "согласовать роли и договоренности",
+            "подготовить сообщение или приглашение",
+            "проверить важные детали",
+        ],
+        "decision_making": [
+            "уточнить цель решения",
+            "собрать варианты",
+            "определить критерии выбора",
+            "сравнить варианты",
+            "выбрать следующий шаг",
+        ],
+        "creative_project": [
+            "определить аудиторию и тему",
+            "собрать идеи формата",
+            "сформулировать концепцию",
+            "набросать первые рубрики или элементы",
+            "проверить реалистичность первого результата",
+        ],
+        "logistics": [
+            "определить дату и объем переезда",
+            "составить список вещей",
+            "организовать транспорт и помощь",
+            "проверить документы и ключи",
+        ],
+        "personal_organization": [
+            "собрать все дедлайны и обязательства",
+            "расставить приоритеты",
+            "разнести дела по дням",
+            "оставить резерв на учебные задачи",
+            "проверить календарь и напоминания",
+        ],
+        "career_planning": [
+            "уточнить карьерную цель на год",
+            "собрать возможные направления",
+            "определить критерии выбора",
+            "сравнить направления по реалистичности",
+            "выбрать ближайший практический шаг",
+        ],
+        "self_reflection": [
+            "зафиксировать текущие ожидания",
+            "выделить важные критерии",
+            "сравнить возможные сценарии",
+            "выбрать направление для проверки",
+        ],
+    }
+    return templates.get(archetype, [])
+
+
+def _extract_title_details(title, context):
+    text = _clean(f"{title} {context}").lower()
+    details = []
+    if "youtube" in text or "ютуб" in text:
+        details.append("сформулировать концепцию YouTube-канала")
+    if "день рожден" in text or "сюрприз" in text:
+        details.append("подготовить сюрприз для друга")
+    if "карьер" in text:
+        details.append("выбрать карьерное направление")
+    if "переезд" in text:
+        details.append("подготовить переезд")
+    if "учеб" in text or "дедлайн" in text:
+        details.append("сохранить учебные дедлайны")
+    return details
+
+
+def _is_generic_decomposition(subgoals):
+    generic = {
+        "уточнить результат",
+        "разбить задачу на этапы",
+        "выполнить основной этап",
+        "проверить итог",
+        "проверить результат",
+    }
+    normalized = {_clean(item).lower() for item in subgoals or []}
+    return len(normalized & generic) >= 2
+
+
 def _description_hints(description):
     return [_normalize_subgoal(clause) for clause in _extract_clauses(description) if not _looks_like_constraint(clause)]
 
@@ -226,6 +356,62 @@ def _normalize_subgoal(value):
     text = re.sub(r"^(нужно|надо|следует|важно)\s+", "", text, flags=re.IGNORECASE)
     if "дат" in text and "сдач" in text:
         return "уточнить дату сдачи"
+    if "дедлайн" in text and ("учеб" in text or "сохран" in text):
+        return "сохранить учебные дедлайны"
+    if "день рожден" in text or "сюрприз" in text:
+        return "подготовить сюрприз для друга"
+    if "формат собы" in text or "формат мероприят" in text:
+        return "определить формат события"
+    if "мест" in text and "врем" in text:
+        return "выбрать место и время"
+    if "участник" in text or "гост" in text or "договор" in text:
+        return "согласовать участников и детали"
+    if "подар" in text or "сценар" in text:
+        return "подготовить подарок или сценарий"
+    if "готовност" in text:
+        return "проверить готовность"
+    if "собрат" in text and "направлен" in text:
+        return "собрать возможные направления"
+    if "сравн" in text and ("вариант" in text or "направлен" in text or "сценар" in text):
+        return "сравнить варианты"
+    if "вариант" in text and ("собрат" in text or "возможн" in text):
+        return "собрать варианты"
+    if "критери" in text and ("выбор" in text or "вариант" in text):
+        return "определить критерии выбора"
+    if "карьер" in text and ("цель" in text or "год" in text):
+        return "уточнить карьерную цель на год"
+    if "карьер" in text or "направлен" in text:
+        return "выбрать карьерное направление"
+    if "следующ" in text and "шаг" in text:
+        return "выбрать следующий шаг"
+    if "youtube" in text or "ютуб" in text:
+        return "сформулировать концепцию YouTube-канала"
+    if "аудитор" in text or "тем" in text:
+        return "определить аудиторию и тему"
+    if "формат" in text and ("иде" in text or "контент" in text):
+        return "собрать идеи формата"
+    if "концепц" in text:
+        return "сформулировать концепцию"
+    if "рубр" in text or "элемент" in text:
+        return "набросать первые рубрики или элементы"
+    if "перв" in text and ("результ" in text or "выпуск" in text):
+        return "проверить реалистичность первого результата"
+    if "переезд" in text and ("дат" in text or "объем" in text):
+        return "определить дату и объем переезда"
+    if "переезд" in text:
+        return "подготовить переезд"
+    if "список вещей" in text:
+        return "составить список вещей"
+    if "транспорт" in text or "помощ" in text:
+        return "организовать транспорт и помощь"
+    if "ключ" in text:
+        return "проверить документы и ключи"
+    if "календар" in text or "напоминан" in text:
+        return "проверить календарь и напоминания"
+    if "приоритет" in text:
+        return "расставить приоритеты"
+    if "по дням" in text:
+        return "разнести дела по дням"
     if any(marker in text for marker in ("дат", "срок поезд")):
         return "выбрать даты поездки"
     if any(marker in text for marker in ("бюджет", "расход", "стоим")):
@@ -308,6 +494,14 @@ def _word_set(text):
         for word in re.findall(r"[а-яёa-z0-9]+", str(text).lower())
         if len(word) > 3 and word not in {"нужно", "надо", "задача", "этап"}
     }
+
+
+def _dedupe(values):
+    result = []
+    for value in values:
+        if value and value not in result:
+            result.append(value)
+    return result
 
 
 def _decomposition_confidence(base_subgoals, description_hints):

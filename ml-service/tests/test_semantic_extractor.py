@@ -150,6 +150,68 @@ class SemanticExtractorTest(unittest.TestCase):
         self.assertEqual(result["merged_subgoals"][0], "сформулировать гипотезы")
         self.assertGreaterEqual(result["decomposition_confidence"], 0.75)
 
+    def test_event_planning_archetype_avoids_generic_fallback(self):
+        result = autonomous_decomposition(
+            {
+                "title": "Организовать сюрприз на день рождения для друга",
+                "description": "",
+                "context": "личная задача",
+            }
+        )
+
+        self.assertIn("event_planning", result["task_archetypes"])
+        self.assertIn("social_coordination", result["task_archetypes"])
+        self.assertIn("определить формат события", result["base_subgoals_from_title"])
+        self.assertIn("согласовать участников и детали", result["merged_subgoals"])
+        self.assertIn("подготовить подарок или сценарий", result["merged_subgoals"])
+        self.assertNotIn("выполнить основной этап", result["merged_subgoals"])
+
+    def test_career_planning_archetype_builds_decision_frame(self):
+        result = autonomous_decomposition(
+            {
+                "title": "Разобраться с карьерным направлением на ближайший год",
+                "description": "",
+                "context": "личная стратегия",
+            }
+        )
+
+        self.assertIn("career_planning", result["task_archetypes"])
+        self.assertIn("decision_making", result["task_archetypes"])
+        self.assertIn("уточнить карьерную цель на год", result["base_subgoals_from_title"])
+        self.assertIn("собрать возможные направления", result["merged_subgoals"])
+        self.assertIn("определить критерии выбора", result["merged_subgoals"])
+        self.assertNotIn("разбить задачу на этапы", result["merged_subgoals"])
+
+    def test_creative_project_archetype_for_youtube_concept(self):
+        result = autonomous_decomposition(
+            {
+                "title": "Придумать концепцию собственного YouTube-канала",
+                "description": "",
+                "context": "личный творческий проект",
+            }
+        )
+
+        self.assertIn("creative_project", result["task_archetypes"])
+        self.assertIn("определить аудиторию и тему", result["base_subgoals_from_title"])
+        self.assertIn("сформулировать концепцию YouTube-канала", result["merged_subgoals"])
+        self.assertNotIn("проверить итог", result["merged_subgoals"])
+
+    def test_logistics_and_personal_organization_archetype_for_move_and_deadlines(self):
+        result = autonomous_decomposition(
+            {
+                "title": "Подготовить переезд и не завалить учебные дедлайны",
+                "description": "",
+                "context": "учеба и бытовая организация",
+            }
+        )
+
+        self.assertIn("logistics", result["task_archetypes"])
+        self.assertIn("personal_organization", result["task_archetypes"])
+        self.assertIn("определить дату и объем переезда", result["base_subgoals_from_title"])
+        self.assertIn("организовать транспорт и помощь", result["merged_subgoals"])
+        self.assertIn("сохранить учебные дедлайны", result["merged_subgoals"])
+        self.assertNotIn("выполнить основной этап", result["merged_subgoals"])
+
 
 if __name__ == "__main__":
     unittest.main()

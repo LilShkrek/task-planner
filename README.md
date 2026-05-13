@@ -105,6 +105,8 @@ Semantic extraction использует title-first decomposition: сначал
 
 Такой слой уменьшает зависимость от подробного описания: если `description` пустой, система все равно строит базовую декомпозицию по названию задачи; если пользователь уже перечислил шаги в описании, они нормализуются, укрупняются и добавляются как hints, а не полностью заменяют исходный каркас.
 
+Для открытых задач без явного домена используется дополнительный слой task archetype detection. Он распознает сценарии вроде `event_planning`, `decision_making`, `creative_project`, `logistics`, `personal_organization`, `social_coordination`, `career_planning` и `self_reflection`, после чего добавляет более предметный каркас подцелей вместо общего fallback.
+
 `planning_params` формируются тем же planning head модели `GRU + dense/perceptron`, но в multi-method режиме применяются ко всей комбинации методов. Это явно указано в поле `planning_params_source`.
 
 ### Обучение моделей
