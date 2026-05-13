@@ -12,6 +12,7 @@ EMPTY_STRUCTURE = {
     "base_subgoals_from_title": [],
     "description_hints": [],
     "merged_subgoals": [],
+    "task_archetypes": [],
     "decomposition_confidence": 0.0,
 }
 
@@ -64,6 +65,7 @@ def normalize_semantics(value):
     base_subgoals = _clean_list(value.get("base_subgoals_from_title"))
     description_hints = _clean_list(value.get("description_hints"))
     merged_subgoals = _clean_list(value.get("merged_subgoals")) or subgoals
+    task_archetypes = _clean_list(value.get("task_archetypes"))
     return {
         "goal": goal,
         "subgoals": merged_subgoals,
@@ -72,6 +74,7 @@ def normalize_semantics(value):
         "base_subgoals_from_title": base_subgoals,
         "description_hints": description_hints,
         "merged_subgoals": merged_subgoals,
+        "task_archetypes": task_archetypes,
         "decomposition_confidence": float(value.get("decomposition_confidence") or 0.0),
     }
 
@@ -89,10 +92,11 @@ def autonomous_decomposition(task):
     title = _clean(task.get("title") or "задача")
     description = _clean(task.get("description") or "")
     context = _clean(task.get("context") or "")
-    domain = _infer_domain(title, "", context)
-    title_subgoals = _title_first_subgoals(title, context, domain)
-    task_archetypes = _detect_task_archetypes(title, context, domain)
-    base_subgoals = _archetype_base_subgoals(title, context, domain, title_subgoals, task_archetypes)
+    initial_domain = _infer_domain(title, "", context)
+    title_subgoals = _title_first_subgoals(title, context, initial_domain)
+    task_archetypes = _detect_task_archetypes(title, context, initial_domain)
+    domain = _domain_for_archetypes(task_archetypes) or initial_domain
+    base_subgoals = _archetype_base_subgoals(title, context, initial_domain, title_subgoals, task_archetypes)
     description_hints = _description_hints(description)
     constraints = _constraints(task, context)
     merged_subgoals = _merge_subgoals(base_subgoals, description_hints)
@@ -122,7 +126,13 @@ def finalize_semantics(task, generated_structure, autonomous):
     )
     merged_subgoals = _merge_subgoals(base_subgoals, description_hints)
     constraints = _merge_constraints(autonomous["constraints"], _clean_list(generated_structure.get("constraints")))
-    domain = normalize_domain(generated.get("domain") or autonomous["domain"], title, merged_subgoals, constraints)
+    task_archetypes = autonomous.get("task_archetypes") or []
+    domain = _domain_for_archetypes(task_archetypes) or normalize_domain(
+        generated.get("domain") or autonomous["domain"],
+        title,
+        merged_subgoals,
+        constraints,
+    )
 
     return normalize_semantics(
         {
@@ -133,6 +143,7 @@ def finalize_semantics(task, generated_structure, autonomous):
             "base_subgoals_from_title": base_subgoals,
             "description_hints": description_hints,
             "merged_subgoals": merged_subgoals,
+            "task_archetypes": task_archetypes,
             "decomposition_confidence": _decomposition_confidence(base_subgoals, description_hints),
         }
     )
@@ -317,6 +328,26 @@ def _subgoals_for_archetype(archetype):
         ],
     }
     return templates.get(archetype, [])
+
+
+def _domain_for_archetypes(archetypes):
+    if "event_planning" in archetypes:
+        return "event_planning"
+    if "creative_project" in archetypes:
+        return "creative_project"
+    if "logistics" in archetypes:
+        return "logistics"
+    if "career_planning" in archetypes:
+        return "career_planning"
+    if "decision_making" in archetypes:
+        return "decision_making"
+    if "personal_organization" in archetypes:
+        return "personal_organization"
+    if "self_reflection" in archetypes:
+        return "self_reflection"
+    if "social_coordination" in archetypes:
+        return "social_coordination"
+    return ""
 
 
 def _extract_title_details(title, context):
@@ -534,7 +565,7 @@ def normalize_domain(domain, goal="", subgoals=None, constraints=None):
     if not text:
         return ""
     checks = (
-        ("travel", ("отпуск", "поезд", "маршрут", "жиль", "бюджет", "документ", "билет")),
+        ("travel", ("отпуск", "поезд", "маршрут", "жиль", "билет", "отел", "гостиниц")),
         ("presentation", ("презентац", "слайд", "выступлен", "доклад")),
         ("email", ("письм", "почт", "ответ", "адресат")),
         ("research", ("гипотез", "эксперимент", "критери", "исслед")),
@@ -544,7 +575,21 @@ def normalize_domain(domain, goal="", subgoals=None, constraints=None):
         if any(marker in text for marker in markers):
             return code
     raw = _clean(domain).lower()
-    if raw in {"travel", "research", "presentation", "email", "study"}:
+    if raw in {
+        "travel",
+        "research",
+        "presentation",
+        "email",
+        "study",
+        "event_planning",
+        "social_coordination",
+        "decision_making",
+        "creative_project",
+        "logistics",
+        "personal_organization",
+        "career_planning",
+        "self_reflection",
+    }:
         return raw
     return "general"
 

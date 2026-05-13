@@ -159,6 +159,46 @@ class PipelineMultiMethodTest(unittest.TestCase):
             {"prioritization", "execution_time", "review_control"},
         )
 
+    def test_event_planning_task_keeps_archetype_subgoals_in_final_steps(self):
+        result = self._analyze(
+            {
+                "title": "Организовать сюрприз на день рождения для друга",
+                "description": "",
+                "context": "личная задача",
+                "priority": 3,
+                "estimated_minutes": 150,
+            },
+            {
+                "goal": "организовать сюрприз на день рождения для друга",
+                "subgoals": [
+                    "определить формат события",
+                    "рассчитать бюджет",
+                    "выбрать место и время",
+                    "согласовать участников и детали",
+                    "подготовить подарок или сценарий",
+                    "проверить готовность",
+                ],
+                "constraints": ["личная задача"],
+                "domain": "event_planning",
+                "task_archetypes": ["event_planning", "social_coordination"],
+            },
+        )
+
+        self.assertEqual(result["semantic_structure"]["domain"], "event_planning")
+        self.assertNotEqual(result["semantic_structure"]["domain"], "travel")
+        text = " ".join(f"{step['title']} {step['description']}" for step in result["plan_draft"]).lower()
+        for marker in ("формат", "бюджет", "мест", "время", "участник", "подар", "сценар", "готовност"):
+            self.assertIn(marker, text)
+        self.assertNotIn("выполнить основной этап", text)
+        summary = result["summary"].lower()
+        self.assertIn("подготовку события", summary)
+        self.assertIn("формат", summary)
+        self.assertIn("бюджет", summary)
+        self.assertIn("место и время", summary)
+        self.assertIn("финальную готовность", summary)
+        self.assertNotIn("план охватывает подготовить", summary)
+        self.assert_plan_matches_selected_methods(result)
+
     def assert_plan_matches_selected_methods(self, result):
         selected = result["selected_methods"]
         steps = result["plan_draft"]

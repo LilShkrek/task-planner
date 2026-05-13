@@ -76,6 +76,7 @@ class SemanticExtractorTest(unittest.TestCase):
                 "base_subgoals_from_title",
                 "description_hints",
                 "merged_subgoals",
+                "task_archetypes",
                 "decomposition_confidence",
             },
         )
@@ -164,7 +165,22 @@ class SemanticExtractorTest(unittest.TestCase):
         self.assertIn("определить формат события", result["base_subgoals_from_title"])
         self.assertIn("согласовать участников и детали", result["merged_subgoals"])
         self.assertIn("подготовить подарок или сценарий", result["merged_subgoals"])
+        self.assertEqual(result["domain"], "event_planning")
         self.assertNotIn("выполнить основной этап", result["merged_subgoals"])
+
+    def test_event_archetype_domain_is_not_travel_after_finalization(self):
+        result = fallback_semantics(
+            {
+                "title": "Организовать сюрприз на день рождения для друга",
+                "description": "",
+                "context": "личная задача",
+            }
+        )
+
+        self.assertEqual(result["domain"], "event_planning")
+        self.assertNotEqual(result["domain"], "travel")
+        self.assertIn("event_planning", result["task_archetypes"])
+        self.assertIn("рассчитать бюджет", result["subgoals"])
 
     def test_career_planning_archetype_builds_decision_frame(self):
         result = autonomous_decomposition(

@@ -45,6 +45,10 @@ SUBJECT_KEYWORDS = (
     "слайд",
     "выступлен",
     "письм",
+    "сюрприз",
+    "событ",
+    "участник",
+    "подар",
 )
 
 TITLE_BAD_STARTS = (
@@ -520,6 +524,14 @@ def _expected_subgoal_titles(task):
     subgoals = _semantic_subgoals(task) + _semantic_constraints(task)
     if not subgoals:
         return []
+    if _is_event_task(task):
+        return [
+            "Определить формат и бюджет",
+            "Выбрать место и время",
+            "Согласовать участников и детали",
+            "Подготовить подарок или сценарий",
+            "Проверить готовность",
+        ]
     patterns = (
         (("дат", "срок", "когда"), "Уточнить даты"),
         (("бюджет", "стоим", "деньг", "расход"), "Рассчитать бюджет"),
@@ -594,6 +606,9 @@ def _step_role(text):
 def _fallback_summary(task, prediction=None):
     title = _task_title(task)
     semantic = _semantic_structure(task)
+    archetype_summary = _archetype_summary(task)
+    if archetype_summary:
+        return archetype_summary
     if semantic.get("goal") and semantic.get("subgoals"):
         items = _summary_items(semantic.get("subgoals") or [])
         if items:
@@ -655,6 +670,18 @@ def _summary_phrase(value):
     text = _normalized(value)
     if not text:
         return ""
+    if "сюрприз" in text:
+        return "подготовку сюрприза"
+    if "формат собы" in text or "формат мероприят" in text:
+        return "формат события"
+    if "мест" in text and "врем" in text:
+        return "выбор места и времени"
+    if "участник" in text or "детал" in text:
+        return "согласование деталей"
+    if "подар" in text or "сценар" in text:
+        return "подарок или сценарий"
+    if "готовност" in text:
+        return "финальную готовность"
     if "дат" in text or "срок" in text:
         return "выбор дат"
     if "бюджет" in text or "стоим" in text or "расход" in text:
@@ -798,6 +825,35 @@ def _semantic_domain(task):
     return str(_semantic_structure(task).get("domain") or "").strip()
 
 
+def _semantic_archetypes(task):
+    archetypes = _semantic_structure(task).get("task_archetypes") or []
+    return [str(item) for item in archetypes if str(item).strip()] if isinstance(archetypes, list) else []
+
+
+def _is_event_task(task):
+    domain = _semantic_domain(task)
+    archetypes = set(_semantic_archetypes(task))
+    subgoals_text = _normalized(" ".join(_semantic_subgoals(task)))
+    raw_text = _normalized(f"{task.get('title', '')} {task.get('description', '')} {task.get('context', '')}")
+    return (
+        domain in {"event_planning", "social_coordination"}
+        or bool({"event_planning", "social_coordination"} & archetypes)
+        or (
+            ("сюрприз" in raw_text or "день рожден" in raw_text)
+            and any(marker in subgoals_text for marker in ("формат", "участник", "подар", "сценар", "готовност"))
+        )
+    )
+
+
+def _archetype_summary(task):
+    if _is_event_task(task):
+        return (
+            "План охватывает подготовку события: формат, бюджет, место и время, "
+            "согласование деталей и финальную готовность."
+        )
+    return ""
+
+
 def _semantic_roots(task):
     text = " ".join(
         [
@@ -839,6 +895,15 @@ def _semantic_step_title(task, position):
     combined = subgoals + constraints
     if not combined:
         return ""
+    if _is_event_task(task):
+        titles = [
+            "Определить формат и бюджет",
+            "Выбрать место и время",
+            "Согласовать участников и детали",
+            "Подготовить подарок или сценарий",
+            "Проверить готовность",
+        ]
+        return _pick_position(titles, position)
 
     patterns = (
         (("дат", "срок", "когда"), "Уточнить даты"),
@@ -865,6 +930,17 @@ def _semantic_step_description(task, title, position):
     constraints = _semantic_constraints(task)
     domain = _semantic_display_name(task)
     normalized_title = _normalized(title)
+
+    if _is_event_task(task):
+        if "формат" in normalized_title or "бюджет" in normalized_title:
+            return f"Определи формат события для «{domain}», рассчитай бюджет и зафиксируй, какой сюрприз реально подготовить."
+        if "мест" in normalized_title or "врем" in normalized_title:
+            return f"Выбери место и время для «{domain}» с учетом удобства друга, участников и доступного бюджета."
+        if "участник" in normalized_title or "детал" in normalized_title:
+            return f"Согласуй участников, роли и важные детали сюрприза так, чтобы подготовка оставалась незаметной для друга."
+        if "подар" in normalized_title or "сценар" in normalized_title:
+            return f"Подготовь подарок или сценарий события: последовательность действий, нужные материалы и запасной вариант."
+        return f"Проверь готовность события: бюджет, место, время, участников, подарок или сценарий и финальные детали."
 
     if "дат" in normalized_title:
         return f"Проверь доступные даты для «{domain}» и согласуй их с важными ограничениями."
